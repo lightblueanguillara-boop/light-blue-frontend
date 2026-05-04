@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Manrope:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --lv-bg: #FAF9F6;
+    --lv-surface: #FFFFFF;
+    --lv-primary: #7A93AC;
+    --lv-primary-hover: #678099;
+    --lv-secondary: #D3C7B6;
+    --lv-text: #2A333C;
+    --lv-text-muted: #5C6A79;
+    --lv-border: #E5E0D8;
+}
+
+body {
+    margin: 0;
+    background: var(--lv-bg);
+    color: var(--lv-text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+}
+
+@layer base {
+    :root {
+        --background: 40 30% 97%;
+        --foreground: 215 18% 20%;
+        --card: 0 0% 100%;
+        --card-foreground: 215 18% 20%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 215 18% 20%;
+        --primary: 209 21% 58%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 39 24% 77%;
+        --secondary-foreground: 215 18% 20%;
+        --muted: 40 18% 92%;
+        --muted-foreground: 213 14% 42%;
+        --accent: 39 24% 77%;
+        --accent-foreground: 215 18% 20%;
+        --destructive: 0 70% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 35 22% 88%;
+        --input: 35 22% 88%;
+        --ring: 209 21% 58%;
+        --chart-1: 209 21% 58%;
+        --chart-2: 39 24% 60%;
+        --chart-3: 215 18% 35%;
+        --chart-4: 200 25% 72%;
+        --chart-5: 30 20% 55%;
+        --radius: 0.25rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Overline utility */
+.overline {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+    color: var(--lv-primary);
+}
+
+/* Smooth hover for primary nav links */
+.nav-link {
+    position: relative;
+    transition: color .25s ease;
+}
+.nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: -6px;
+    height: 1px;
+    width: 0;
+    background: var(--lv-primary);
+    transition: width .3s ease;
+}
+.nav-link:hover::after { width: 100%; }
+
+/* glass header */
+.glass-header {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    background: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(229, 224, 216, 0.6);
+}
+
+/* gentle fade */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp .9s ease both; }
+
+.booking-day-blocked {
+    color: #c97a6a !important;
+    text-decoration: line-through;
+    opacity: 0.55 !important;
+    pointer-events: none;
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+}
