@@ -15,6 +15,7 @@ import AdminInbox from "./pages/admin/Inbox";
 import AdminCRM from "./pages/admin/CRM";
 import AdminMarketing from "./pages/admin/Marketing";
 import AdminSettings from "./pages/admin/Settings";
+import AdminGallery from "./pages/admin/Gallery"; // Import della nuova pagina
 
 function RequireAuth({ children }) {
     const token = localStorage.getItem("lv_admin_token");
@@ -47,6 +48,7 @@ function App() {
                         <Route path="inbox" element={<AdminInbox />} />
                         <Route path="crm" element={<AdminCRM />} />
                         <Route path="marketing" element={<AdminMarketing />} />
+                        <Route path="gallery" element={<AdminGallery />} /> {/* Nuova rotta */}
                         <Route path="settings" element={<AdminSettings />} />
                     </Route>
                 </Routes>
