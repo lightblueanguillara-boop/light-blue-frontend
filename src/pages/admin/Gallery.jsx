@@ -1,113 +1,77 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Image as ImageIcon, Loader2, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Plus, Image as ImageIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../../lib/api";
+import UploadModal from "../../components/admin/UploadModal";
 
-export default function Gallery() {
-    const [images, setImages] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    // Caricamento iniziale delle immagini
-    useEffect(() => {
-        fetchImages();
-    }, []);
-
-    const fetchImages = async () => {
-        try {
-            const response = await api.get("/images");
-            setImages(response.data);
-        } catch (error) {
-            toast.error("Errore nel caricamento della galleria");
-        } finally {
-            setLoading(false);
+export default function AdminGallery() {
+    const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [images, setImages] = useState([
+        {
+            id: 1,
+            url: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Lake_Como_from_Bellagio_01.jpg/1200px-Lake_Como_from_Bellagio_01.jpg",
+            category: "gallery",
+            alt: "Vista Lago di Como"
         }
-    };
+    ]);
 
-    const handleDelete = async (id) => {
-        if (!confirm("Sei sicuro di voler eliminare questa immagine?")) return;
-        try {
-            await api.delete(`/images/${id}`);
-            setImages(images.filter(img => img.id !== id));
-            toast.success("Immagine eliminata");
-        } catch (error) {
-            toast.error("Errore durante l'eliminazione");
-        }
+    const handleDelete = (id) => {
+        // Simulazione eliminazione (collegheremo l'API tra poco)
+        setImages(images.filter(img => img.id !== id));
+        toast.error("Immagine rimossa dalla galleria");
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
-            {/* Header della pagina */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <p className="overline text-lake-blue">Media & Asset</p>
-                    <h1 className="font-display text-4xl text-lake-ink mt-2">Gestione Galleria</h1>
-                    <p className="text-lake-ink/60 mt-1">Gestisci le foto della Home e della galleria fotografica della Villa.</p>
+                    <h1 className="font-display text-3xl text-lake-ink uppercase tracking-wider">Media & Galleria</h1>
+                    <p className="text-lake-ink/60 mt-2 font-light">Gestisci le immagini del sito e della galleria fotografica.</p>
                 </div>
+                
                 <button 
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-lake-blue text-white rounded-sm hover:bg-[#678099] transition-all shadow-sm text-sm"
-                    onClick={() => toast.info("Funzionalità di upload in arrivo nel prossimo step")}
+                    onClick={() => setIsUploadOpen(true)}
+                    className="flex items-center justify-center gap-2 bg-lake-ink text-white px-6 py-3 rounded-sm text-xs uppercase tracking-[0.2em] hover:bg-lake-blue transition-colors w-full md:w-auto"
                 >
-                    <Plus size={18} /> Carica nuova immagine
+                    <Plus size={16} /> Carica nuova immagine
                 </button>
             </div>
 
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-lake-ink/40">
-                    <Loader2 className="animate-spin mb-4" size={32} />
-                    <p>Caricamento media...</p>
+            {images.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-lake-border rounded-sm bg-lake-sand/20">
+                    <ImageIcon className="text-lake-ink/20 mb-4" size={48} strokeWidth={1} />
+                    <p className="text-lake-ink/50 font-light italic">Nessuna immagine presente nella galleria.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {images.length === 0 && (
-                        <div className="col-span-full py-20 border-2 border-dashed border-lake-border rounded-sm flex flex-col items-center justify-center text-lake-ink/40">
-                            <ImageIcon size={48} strokeWidth={1} className="mb-4" />
-                            <p>Nessuna immagine presente in galleria</p>
-                        </div>
-                    )}
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {images.map((img) => (
-                        <div key={img.id} className="group relative bg-white border border-lake-border rounded-sm overflow-hidden hover:shadow-md transition-all">
-                            {/* Badge Categoria */}
-                            <div className="absolute top-3 left-3 z-10">
-                                <span className={`px-2 py-1 text-[10px] uppercase tracking-widest font-medium rounded-full shadow-sm ${
-                                    img.category === 'home' 
-                                    ? 'bg-lake-blue text-white' 
-                                    : 'bg-white/90 text-lake-ink'
-                                }`}>
-                                    {img.category}
-                                </span>
-                            </div>
-
-                            {/* Immagine */}
-                            <div className="aspect-[4/3] w-full bg-lake-sand overflow-hidden">
+                        <div key={img.id} className="group relative bg-white border border-lake-border rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            <div className="aspect-video overflow-hidden bg-lake-sand">
                                 <img 
                                     src={img.url} 
-                                    alt={img.alt_text || "Immagine villa"} 
+                                    alt={img.alt}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 />
                             </div>
-
-                            {/* Azioni al passaggio del mouse */}
-                            <div className="p-3 flex items-center justify-between bg-white border-t border-lake-border">
-                                <div className="truncate pr-2">
-                                    <p className="text-xs text-lake-ink/50 truncate italic">
-                                        {img.alt_text || "Senza descrizione"}
-                                    </p>
+                            
+                            <div className="p-4 flex items-center justify-between">
+                                <div>
+                                    <span className="text-[10px] uppercase tracking-widest text-lake-blue font-semibold">{img.category}</span>
+                                    <p className="text-sm text-lake-ink truncate max-w-[150px]">{img.alt || "Senza titolo"}</p>
                                 </div>
+                                
                                 <div className="flex gap-1">
                                     <a 
                                         href={img.url} 
                                         target="_blank" 
                                         rel="noreferrer"
                                         className="p-2 text-lake-ink/40 hover:text-lake-blue transition-colors"
-                                        title="Apri originale"
                                     >
                                         <ExternalLink size={16} />
                                     </a>
                                     <button 
                                         onClick={() => handleDelete(img.id)}
                                         className="p-2 text-lake-ink/40 hover:text-red-500 transition-colors"
-                                        title="Elimina"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -117,6 +81,15 @@ export default function Gallery() {
                     ))}
                 </div>
             )}
+
+            <UploadModal 
+                isOpen={isUploadOpen} 
+                onClose={() => setIsUploadOpen(false)}
+                onRefresh={() => {
+                    // Qui aggiungeremo la logica per ricaricare le foto dal server
+                    toast.success("Galleria aggiornata!");
+                }} 
+            />
         </div>
     );
 }
