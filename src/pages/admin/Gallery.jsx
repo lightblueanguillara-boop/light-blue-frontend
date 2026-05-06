@@ -1,24 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Image as ImageIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import UploadModal from "../../components/admin/UploadModal";
+import api from "../../lib/api"; // Assicurati che questo path sia corretto per le tue chiamate API
 
 export default function AdminGallery() {
     const [isUploadOpen, setIsUploadOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [images, setImages] = useState([
-        {
-            id: 1,
-            url: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Lake_Como_from_Bellagio_01.jpg/1200px-Lake_Como_from_Bellagio_01.jpg",
-            category: "gallery",
-            alt: "Vista Lago di Como"
-        }
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [images, setImages] = useState([]);
 
-    const handleDelete = (id) => {
-        // Simulazione eliminazione (collegheremo l'API tra poco)
-        setImages(images.filter(img => img.id !== id));
-        toast.error("Immagine rimossa dalla galleria");
+    // Funzione per caricare le immagini dal server
+    const fetchImages = async () => {
+        try {
+            setLoading(true);
+            const data = await api.get("/admin/gallery");
+            setImages(data);
+        } catch (error) {
+            console.error("Errore nel caricamento galleria:", error);
+            toast.error("Impossibile caricare le immagini");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchImages();
+    }, []);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Sei sicuro di voler eliminare questa immagine?")) return;
+
+        try {
+            await api.delete(`/admin/gallery/${id}`);
+            setImages(images.filter(img => img.id !== id));
+            toast.success("Immagine rimossa correttamente");
+        } catch (error) {
+            toast.error("Errore durante l'eliminazione");
+        }
     };
 
     return (
@@ -37,7 +55,11 @@ export default function AdminGallery() {
                 </button>
             </div>
 
-            {images.length === 0 ? (
+            {loading ? (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="animate-spin text-lake-blue" size={32} />
+                </div>
+            ) : images.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-lake-border rounded-sm bg-lake-sand/20">
                     <ImageIcon className="text-lake-ink/20 mb-4" size={48} strokeWidth={1} />
                     <p className="text-lake-ink/50 font-light italic">Nessuna immagine presente nella galleria.</p>
@@ -49,7 +71,7 @@ export default function AdminGallery() {
                             <div className="aspect-video overflow-hidden bg-lake-sand">
                                 <img 
                                     src={img.url} 
-                                    alt={img.alt}
+                                    alt={img.caption || "Galleria"}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 />
                             </div>
@@ -57,7 +79,7 @@ export default function AdminGallery() {
                             <div className="p-4 flex items-center justify-between">
                                 <div>
                                     <span className="text-[10px] uppercase tracking-widest text-lake-blue font-semibold">{img.category}</span>
-                                    <p className="text-sm text-lake-ink truncate max-w-[150px]">{img.alt || "Senza titolo"}</p>
+                                    <p className="text-sm text-lake-ink truncate max-w-[150px]">{img.caption || "Senza titolo"}</p>
                                 </div>
                                 
                                 <div className="flex gap-1">
@@ -85,10 +107,7 @@ export default function AdminGallery() {
             <UploadModal 
                 isOpen={isUploadOpen} 
                 onClose={() => setIsUploadOpen(false)}
-                onRefresh={() => {
-                    // Qui aggiungeremo la logica per ricaricare le foto dal server
-                    toast.success("Galleria aggiornata!");
-                }} 
+                onRefresh={fetchImages} 
             />
         </div>
     );
