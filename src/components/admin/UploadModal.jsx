@@ -1,117 +1,142 @@
-import { useState } from "react";
-import { X, Upload, Link as LinkIcon, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, Upload, Loader2, FileImage } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../../lib/api";
+import api from "../../lib/api";
 
 export default function UploadModal({ isOpen, onClose, onRefresh }) {
     const [loading, setLoading] = useState(false);
-    const [mode, setMode] = useState("file"); // "file" o "url"
+    const [file, setFile] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const fileInputRef = useRef(null);
+    
     const [formData, setFormData] = useState({
-        url: "",
         category: "gallery",
-        alt_text: ""
+        caption: ""
     });
 
     if (!isOpen) return null;
 
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            setPreview(URL.createObjectURL(selectedFile));
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!file) {
+            toast.error("Seleziona un'immagine prima di procedere");
+            return;
+        }
+
         setLoading(true);
         try {
-            // Qui gestiremo l'invio al backend
-            await api.post("/images", formData);
-            toast.success("Immagine aggiunta con successo");
+            // Creiamo un oggetto FormData per inviare il file binario
+            const data = new FormData();
+            data.append("file", file);
+            data.append("category", formData.category);
+            data.append("caption", formData.caption);
+
+            await api.post("/admin/gallery/upload", data, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            toast.success("Immagine caricata con successo su Cloudinary");
             onRefresh();
-            onClose();
+            handleClose();
         } catch (error) {
-            toast.error("Errore durante il caricamento");
+            console.error("Errore upload:", error);
+            toast.error("Errore durante il caricamento dell'immagine");
         } finally {
             setLoading(false);
         }
     };
 
+    const handleClose = () => {
+        setFile(null);
+        setPreview(null);
+        setFormData({ category: "gallery", caption: "" });
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-lake-ink/40 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-md rounded-sm shadow-xl overflow-hidden">
+            <div className="bg-white w-full max-w-md rounded-sm shadow-xl overflow-hidden border border-lake-border">
                 {/* Header Modal */}
-                <div className="p-6 border-b border-lake-border flex justify-between items-center">
-                    <h2 className="font-display text-xl text-lake-ink">Aggiungi Media</h2>
-                    <button onClick={onClose} className="text-lake-ink/40 hover:text-lake-ink">
+                <div className="p-6 border-b border-lake-border flex justify-between items-center bg-lake-sand/10">
+                    <h2 className="font-display text-xl text-lake-ink uppercase tracking-wider">Aggiungi Media</h2>
+                    <button onClick={handleClose} className="text-lake-ink/40 hover:text-lake-ink transition-colors">
                         <X size={20} />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    {/* Switch Mode */}
-                    <div className="flex bg-lake-sand p-1 rounded-sm">
-                        <button 
-                            type="button"
-                            onClick={() => setMode("file")}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs uppercase tracking-widest ${mode === "file" ? "bg-white shadow-sm text-lake-blue" : "text-lake-ink/50"}`}
-                        >
-                            <Upload size={14} /> Carica File
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={() => setMode("url")}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs uppercase tracking-widest ${mode === "url" ? "bg-white shadow-sm text-lake-blue" : "text-lake-ink/50"}`}
-                        >
-                            <LinkIcon size={14} /> Incolla URL
-                        </button>
-                    </div>
-
-                    {/* Inputs */}
-                    <div className="space-y-4">
-                        {mode === "url" ? (
-                            <div>
-                                <label className="block text-xs font-medium text-lake-ink/60 uppercase mb-1.5">URL Immagine</label>
-                                <input 
-                                    type="url" 
-                                    required
-                                    className="w-full px-3 py-2 bg-lake-sand border border-lake-border rounded-sm text-sm focus:outline-none focus:border-lake-blue"
-                                    placeholder="https://images.unsplash.com/..."
-                                    value={formData.url}
-                                    onChange={(e) => setFormData({...formData, url: e.target.value})}
-                                />
+                    {/* Upload Area */}
+                    <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`relative border-2 border-dashed rounded-sm p-8 flex flex-col items-center justify-center transition-all cursor-pointer ${
+                            preview ? "border-lake-blue bg-white" : "border-lake-border bg-lake-sand/30 hover:bg-lake-sand/50"
+                        }`}
+                    >
+                        <input 
+                            type="file" 
+                            ref={fileInputRef}
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={handleFileChange}
+                        />
+                        
+                        {preview ? (
+                            <div className="space-y-3 w-full">
+                                <img src={preview} alt="Preview" className="w-full h-40 object-cover rounded-sm shadow-sm" />
+                                <p className="text-[10px] text-center text-lake-blue uppercase tracking-widest font-semibold">Clicca per cambiare immagine</p>
                             </div>
                         ) : (
-                            <div className="border-2 border-dashed border-lake-border rounded-sm p-8 flex flex-col items-center justify-center bg-lake-sand/30 hover:bg-lake-sand/50 transition-colors cursor-pointer">
+                            <>
                                 <Upload className="text-lake-ink/30 mb-2" size={32} strokeWidth={1} />
-                                <p className="text-xs text-lake-ink/50 text-center">Trascina qui il file o clicca per selezionarlo</p>
-                                <p className="text-[10px] text-lake-ink/30 mt-1">Sperimentale: per ora usa la modalità URL</p>
-                            </div>
+                                <p className="text-xs text-lake-ink/50 text-center uppercase tracking-wider">Trascina o clicca per caricare</p>
+                                <p className="text-[10px] text-lake-ink/30 mt-1 uppercase">JPG, PNG o WEBP (Max 5MB)</p>
+                            </>
                         )}
+                    </div>
 
+                    <div className="space-y-4">
                         <div>
-                            <label className="block text-xs font-medium text-lake-ink/60 uppercase mb-1.5">Categoria</label>
+                            <label className="block text-xs font-medium text-lake-ink/60 uppercase tracking-widest mb-1.5">Categoria</label>
                             <select 
-                                className="w-full px-3 py-2 bg-lake-sand border border-lake-border rounded-sm text-sm focus:outline-none focus:border-lake-blue"
+                                className="w-full px-3 py-2 bg-lake-sand border border-lake-border rounded-sm text-sm focus:outline-none focus:border-lake-blue transition-colors"
                                 value={formData.category}
                                 onChange={(e) => setFormData({...formData, category: e.target.value})}
                             >
                                 <option value="gallery">Galleria Generale</option>
-                                <option value="home">Immagine Hero (Home)</option>
+                                <option value="rooms">Camere</option>
+                                <option value="home">Home Page</option>
+                                <option value="general">Varie</option>
                             </select>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-lake-ink/60 uppercase mb-1.5">Descrizione (Alt Text)</label>
+                            <label className="block text-xs font-medium text-lake-ink/60 uppercase tracking-widest mb-1.5">Didascalia</label>
                             <input 
                                 type="text" 
-                                className="w-full px-3 py-2 bg-lake-sand border border-lake-border rounded-sm text-sm focus:outline-none focus:border-lake-blue"
-                                placeholder="Esempio: Vista lago dalla terrazza"
-                                value={formData.alt_text}
-                                onChange={(e) => setFormData({...formData, alt_text: e.target.value})}
+                                className="w-full px-3 py-2 bg-lake-sand border border-lake-border rounded-sm text-sm focus:outline-none focus:border-lake-blue transition-colors font-light"
+                                placeholder="Esempio: Tramonto sul Lago di Bracciano"
+                                value={formData.caption}
+                                onChange={(e) => setFormData({...formData, caption: e.target.value})}
                             />
                         </div>
                     </div>
 
                     <button 
                         type="submit" 
-                        disabled={loading}
-                        className="w-full py-3 bg-lake-ink text-white rounded-sm text-sm uppercase tracking-[0.2em] hover:bg-lake-blue transition-colors flex items-center justify-center gap-2"
+                        disabled={loading || !file}
+                        className="w-full py-3 bg-lake-ink text-white rounded-sm text-xs uppercase tracking-[0.2em] hover:bg-lake-blue disabled:bg-lake-ink/20 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
                     >
-                        {loading ? <Loader2 className="animate-spin" size={16} /> : "Conferma e Salva"}
+                        {loading ? <Loader2 className="animate-spin" size={16} /> : "Carica nella Galleria"}
                     </button>
                 </form>
             </div>
