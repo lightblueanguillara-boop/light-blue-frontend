@@ -2,22 +2,34 @@ import { useState, useEffect } from "react";
 import { Plus, Image as ImageIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import UploadModal from "../../components/admin/UploadModal";
-import api from "../../lib/api"; // Assicurati che questo path sia corretto per le tue chiamate API
+import api from "../../lib/api"; 
 
 export default function AdminGallery() {
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [images, setImages] = useState([]);
 
-    // Funzione per caricare le immagini dal server
+    // Funzione per caricare le immagini dal server con protezione anti-crash
     const fetchImages = async () => {
         try {
             setLoading(true);
-            const data = await api.get("/admin/gallery");
-            setImages(data);
+            const response = await api.get("/admin/gallery");
+            
+            // Gestione robusta della risposta: 
+            // Verifichiamo se la risposta è direttamente un array o se i dati sono in .data
+            const data = Array.isArray(response) ? response : (response?.data || []);
+            
+            if (Array.isArray(data)) {
+                setImages(data);
+            } else {
+                console.error("Formato dati ricevuto non valido:", response);
+                setImages([]);
+            }
         } catch (error) {
             console.error("Errore nel caricamento galleria:", error);
-            toast.error("Impossibile caricare le immagini");
+            // In caso di errore (es. 404 o 500), resettiamo a array vuoto per non crashare
+            setImages([]);
+            toast.error("Impossibile recuperare le immagini dal server");
         } finally {
             setLoading(false);
         }
@@ -35,6 +47,7 @@ export default function AdminGallery() {
             setImages(images.filter(img => img.id !== id));
             toast.success("Immagine rimossa correttamente");
         } catch (error) {
+            console.error("Errore eliminazione:", error);
             toast.error("Errore durante l'eliminazione");
         }
     };
@@ -67,7 +80,7 @@ export default function AdminGallery() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {images.map((img) => (
-                        <div key={img.id} className="group relative bg-white border border-lake-border rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div key={img.id || img._id} className="group relative bg-white border border-lake-border rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <div className="aspect-video overflow-hidden bg-lake-sand">
                                 <img 
                                     src={img.url} 
@@ -92,7 +105,7 @@ export default function AdminGallery() {
                                         <ExternalLink size={16} />
                                     </a>
                                     <button 
-                                        onClick={() => handleDelete(img.id)}
+                                        onClick={() => handleDelete(img.id || img._id)}
                                         className="p-2 text-lake-ink/40 hover:text-red-500 transition-colors"
                                     >
                                         <Trash2 size={16} />
