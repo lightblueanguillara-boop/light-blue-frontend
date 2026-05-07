@@ -157,10 +157,10 @@ export default function Home() {
                 </div>
                 <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner">
                     <iframe
-                        title="Mappa"
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=12.25%2C42.07%2C12.29%2C42.10&layer=mapnik&marker=42.0884%2C12.2710"
-                        className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
-                    />
+    title="Mappa"
+    src="https://www.openstreetmap.org/export/embed.html?bbox=12.267536222934725%2C42.09224558875566%2C12.269789278507234%2C42.09357315674993&layer=mapnik&marker=42.092909%2C12.268663"
+    className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
+/>
                 </div>
             </section>
 
