@@ -13,6 +13,10 @@ import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import api from "../lib/api";
 
+// Import della libreria Lightbox e relativi stili
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
+
 const HERO = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Anguillara_Sabazia_dal_lago_%281%29.jpg/1920px-Anguillara_Sabazia_dal_lago_%281%29.jpg";
 
 const services = [
@@ -31,6 +35,9 @@ export default function Home() {
     const [images, setImages] = useState([]);
     const [form, setForm] = useState({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
     const [sending, setSending] = useState(false);
+    
+    // Stato per gestire l'apertura della galleria (indice dell'immagine selezionata)
+    const [index, setIndex] = useState(-1);
 
     useEffect(() => {
         api.get("/villa/info").then((r) => setInfo(r.data)).catch(() => {});
@@ -110,8 +117,12 @@ export default function Home() {
                     </div>
                 ) : (
                     <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
-                        {images.map((img, index) => (
-                            <div key={img.id || index} className="break-inside-avoid overflow-hidden rounded-sm shadow-sm group bg-white border border-lake-border">
+                        {images.map((img, idx) => (
+                            <div 
+                                key={img.id || idx} 
+                                className="break-inside-avoid overflow-hidden rounded-sm shadow-sm group bg-white border border-lake-border cursor-pointer"
+                                onClick={() => setIndex(idx)}
+                            >
                                 <img 
                                     src={img.url} 
                                     alt={img.caption || "Galleria"} 
@@ -127,6 +138,14 @@ export default function Home() {
                         ))}
                     </div>
                 )}
+
+                {/* LIGHTBOX COMPONENT */}
+                <Lightbox
+                    index={index}
+                    open={index >= 0}
+                    close={() => setIndex(-1)}
+                    slides={images.map((img) => ({ src: img.url }))}
+                />
             </section>
 
             {/* SERVICES */}
@@ -157,10 +176,10 @@ export default function Home() {
                 </div>
                 <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner">
                     <iframe
-    title="Mappa"
-    src="https://www.openstreetmap.org/export/embed.html?bbox=12.267536222934725%2C42.09224558875566%2C12.269789278507234%2C42.09357315674993&layer=mapnik&marker=42.092909%2C12.268663"
-    className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
-/>
+                        title="Mappa"
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=12.267536222934725%2C42.09224558875566%2C12.269789278507234%2C42.09357315674993&layer=mapnik&marker=42.092909%2C12.268663"
+                        className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
+                    />
                 </div>
             </section>
 
