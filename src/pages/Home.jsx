@@ -13,7 +13,6 @@ import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import api from "../lib/api";
 
-// Link corretti e fallback
 const HERO = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Anguillara_Sabazia_dal_lago_%281%29.jpg/1920px-Anguillara_Sabazia_dal_lago_%281%29.jpg";
 
 const services = [
@@ -34,10 +33,8 @@ export default function Home() {
     const [sending, setSending] = useState(false);
 
     useEffect(() => {
-        // Carica info villa
         api.get("/villa/info").then((r) => setInfo(r.data)).catch(() => {});
         
-        // Carica immagini galleria pubblica
         api.get("/gallery")
             .then((r) => {
                 const data = Array.isArray(r) ? r : (r?.data || []);
@@ -61,7 +58,7 @@ export default function Home() {
     };
 
     return (
-        <div className="bg-lake-cream min-h-screen">
+        <div className="bg-lake-cream min-h-screen font-sans">
             <Header />
 
             {/* HERO */}
@@ -70,17 +67,13 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/55" />
                 <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 h-full flex flex-col justify-end pb-20 text-white">
                     <p className="overline text-white/90 font-medium tracking-[0.2em]">Appartamento vista lago · Anguillara Sabazia</p>
-                    <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4">
+                    <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4 text-white">
                         Una piccola perla sul Lago di Bracciano.
                     </h1>
-                    <p className="mt-6 max-w-xl text-base text-white/90">Nel cuore del centro storico, a pochi passi dal lungolago.</p>
                     <div className="mt-10 flex flex-wrap gap-4">
                         <Link to="/book" className="px-7 py-3.5 rounded-sm bg-white text-lake-ink text-sm font-medium hover:bg-lake-sand transition-colors">
                             Verifica disponibilità
                         </Link>
-                        <a href="#gallery" className="px-7 py-3.5 rounded-sm border border-white/60 text-white text-sm hover:bg-white/10 transition-colors">
-                            Esplora la casa
-                        </a>
                     </div>
                 </div>
             </section>
@@ -91,19 +84,19 @@ export default function Home() {
             <section id="about" className="mx-auto max-w-7xl px-6 sm:px-10 py-28 grid md:grid-cols-12 gap-10">
                 <div className="md:col-span-5">
                     <p className="overline text-lake-blue">La Casa</p>
-                    <h2 className="font-display font-light text-4xl lg:text-5xl tracking-tight text-lake-ink mt-4">Light Blue — semplicità e vista lago.</h2>
+                    <h2 className="font-display font-light text-4xl lg:text-5xl tracking-tight text-lake-ink mt-4 italic">Light Blue — semplicità e vista lago.</h2>
                 </div>
                 <div className="md:col-span-6 md:col-start-7 text-lake-ink/80 leading-relaxed space-y-4">
-                    <p>{info?.description || "Benvenuti a Light Blue, il vostro rifugio nel cuore di Anguillara Sabazia."}</p>
+                    <p>{info?.description || "Benvenuti nel cuore di Anguillara Sabazia."}</p>
                     <div className="grid grid-cols-3 gap-6 pt-6 border-t border-lake-border">
-                        <div><p className="font-display text-3xl text-lake-ink">3</p><p className="text-xs text-lake-ink/60 mt-1 uppercase tracking-widest">Ospiti</p></div>
-                        <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-xs text-lake-ink/60 mt-1 uppercase tracking-widest">Camera</p></div>
-                        <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-xs text-lake-ink/60 mt-1 uppercase tracking-widest">Bagno</p></div>
+                        <div><p className="font-display text-3xl text-lake-ink">3</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Ospiti</p></div>
+                        <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Camera</p></div>
+                        <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Bagno</p></div>
                     </div>
                 </div>
             </section>
 
-            {/* GALLERY MASONRY (MOSTRA TUTTE LE FOTO) */}
+            {/* GALLERY MASONRY */}
             <section id="gallery" className="mx-auto max-w-7xl px-6 sm:px-10 py-16">
                 <div className="mb-10">
                     <p className="overline text-lake-blue">Galleria</p>
@@ -121,7 +114,7 @@ export default function Home() {
                             <div key={img.id || index} className="break-inside-avoid overflow-hidden rounded-sm shadow-sm group bg-white border border-lake-border">
                                 <img 
                                     src={img.url} 
-                                    alt={img.caption || `Galleria ${index}`} 
+                                    alt={img.caption || "Galleria"} 
                                     className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
                                 />
                                 {img.caption && (
@@ -142,7 +135,7 @@ export default function Home() {
                 <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Il territorio, a portata di piedi.</h2>
                 <div className="grid md:grid-cols-4 gap-6 mt-14">
                     {services.map((s) => (
-                        <div key={s.title} className="p-7 bg-white border border-lake-border rounded-sm hover:-translate-y-1 hover:shadow-md transition-all">
+                        <div key={s.title} className="p-7 bg-white border border-lake-border rounded-sm hover:-translate-y-1 transition-all">
                             <s.icon className="w-6 h-6 text-lake-blue" strokeWidth={1.5} />
                             <p className="font-display text-lg text-lake-ink mt-5">{s.title}</p>
                             <p className="text-sm text-lake-ink/65 mt-2 leading-relaxed">{s.desc}</p>
@@ -152,15 +145,14 @@ export default function Home() {
             </section>
 
             {/* MAP */}
-            <section id="map" className="mx-auto max-w-7xl px-6 sm:px-10 py-20 grid md:grid-cols-2 gap-12 items-center border-t border-lake-border/30">
+            <section id="map" className="mx-auto max-w-7xl px-6 sm:px-10 py-20 grid md:grid-cols-2 gap-12 items-center">
                 <div>
                     <p className="overline text-lake-blue">Dove siamo</p>
-                    <h2 className="font-display text-4xl text-lake-ink mt-3 font-light">Anguillara Sabazia, Lago di Bracciano.</h2>
-                    <p className="mt-6 text-lake-ink/70 leading-relaxed">Borgo medievale affacciato sul Lago di Bracciano, a soli 40 minuti da Roma.</p>
+                    <h2 className="font-display text-4xl text-lake-ink mt-3 font-light italic">Anguillara Sabazia, Lago di Bracciano.</h2>
                     <div className="mt-6 space-y-3 text-sm text-lake-ink/80">
-                        <p><span className="font-semibold uppercase tracking-tighter mr-2 text-lake-blue">Indirizzo</span> {info?.address}</p>
-                        <p><span className="font-semibold uppercase tracking-tighter mr-2 text-lake-blue">Tel</span> {info?.phone}</p>
-                        <p><span className="font-semibold uppercase tracking-tighter mr-2 text-lake-blue">Email</span> {info?.email}</p>
+                        <p><span className="font-semibold uppercase mr-2 text-lake-blue">Indirizzo:</span> {info?.address}</p>
+                        <p><span className="font-semibold uppercase mr-2 text-lake-blue">Tel:</span> {info?.phone}</p>
+                        <p><span className="font-semibold uppercase mr-2 text-lake-blue">Email:</span> {info?.email}</p>
                     </div>
                 </div>
                 <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner">
@@ -176,19 +168,19 @@ export default function Home() {
             <section id="contact" className="mx-auto max-w-4xl px-6 sm:px-10 py-28">
                 <div className="text-center mb-12">
                     <p className="overline text-lake-blue">Contatti</p>
-                    <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Scrivici per info o prenotazioni.</h2>
+                    <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Scrivici.</h2>
                 </div>
                 <form onSubmit={submit} className="grid md:grid-cols-2 gap-5 bg-white p-8 rounded-sm border border-lake-border shadow-sm">
                     <Input placeholder="Nome e cognome" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                     <Input placeholder="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input placeholder="Telefono (opzionale)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="md:col-span-2" />
                     <Textarea placeholder="Il tuo messaggio" required rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="md:col-span-2" />
-                    <label className="md:col-span-2 flex items-start gap-3 text-sm text-lake-ink/70 cursor-pointer">
+                    <label className="md:col-span-2 flex items-start gap-3 text-sm text-lake-ink/70">
                         <Checkbox checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
-                        <span>Acconsento al trattamento dei dati personali secondo le normative GDPR.</span>
+                        <span>Acconsento al trattamento dati GDPR.</span>
                     </label>
-                    <button type="submit" disabled={sending} className="md:col-span-2 w-full py-4 rounded-sm bg-lake-blue text-white text-sm font-medium hover:bg-lake-ink transition-colors disabled:opacity-50">
-                        {sending ? "Invio in corso..." : "Invia messaggio"}
+                    <button type="submit" disabled={sending} className="md:col-span-2 w-full py-4 rounded-sm bg-lake-blue text-white text-sm font-medium hover:bg-lake-ink transition-colors">
+                        {sending ? "Invio..." : "Invia messaggio"}
                     </button>
                 </form>
             </section>
@@ -197,4 +189,3 @@ export default function Home() {
         </div>
     );
 }
-</section>
