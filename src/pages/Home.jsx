@@ -11,7 +11,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import api from "../lib/api"; // Usa l'import di default come nell'admin
 
 // Immagini di fallback (se il database è vuoto usa queste)
-const HERO = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Angu1illara_Sabazia_dal_lago_%281%29.jpg/1920px-Anguillara_Sabazia_dal_lago_%281%29.jpg";
+const HERO = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Anguillara_Sabazia_dal_lago_%281%29.jpg/1920px-Anguillara_Sabazia_dal_lago_%281%29.jpg";
 const FALLBACK_G = "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1400&q=85";
 
 const services = [
