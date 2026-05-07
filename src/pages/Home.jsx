@@ -100,7 +100,7 @@ export default function Home() {
             <section id="gallery" className="mx-auto max-w-7xl px-6 sm:px-10 py-16">
                 <div className="mb-10">
                     <p className="overline text-lake-blue">Galleria</p>
-                    <h2 className="font-display text-4xl text-lake-ink mt-3 font-light">Gli spazi</h2>
+                    <h2 className="font-display text-4xl text-lake-ink mt-3 font-light">Atmosfera</h2>
                 </div>
 
                 {images.length === 0 ? (
