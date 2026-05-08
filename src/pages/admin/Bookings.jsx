@@ -60,7 +60,7 @@ export default function AdminBookings() {
                 matchesStatus = true;
             } else if (filterStatus === "external") {
                 // Seleziona se lo stato è external OPPURE se proviene da OTA
-                matchesStatus = (b.status === "external" || b.source === "airbnb" || b.source === "booking.com");
+                matchesStatus = (b.status === "external" || b.source === "airbnb" || b.source === "booking");
             } else {
                 matchesStatus = b.status === filterStatus;
             }
@@ -72,7 +72,7 @@ export default function AdminBookings() {
             if (filterSource === "all") {
                 matchesSource = true;
             } else if (filterSource === "external") {
-                matchesSource = (b.source === "airbnb" || b.source === "booking.com" || b.source === "external");
+                matchesSource = (b.source === "airbnb" || b.source === "booking" || b.source === "external");
             } else {
                 matchesSource = b.source === filterSource;
             }
