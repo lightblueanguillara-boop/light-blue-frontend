@@ -29,7 +29,6 @@ export default function AdminBookings() {
     const [filterPayment, setFilterPayment] = useState("all");
     const [filterSource, setFilterSource] = useState("all");
     
-    const [refundDialog, setRefundDialog] = useState({ open: false, booking: null, preview: null, custom: "" });
     const [manualOpen, setManualOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
 
@@ -101,25 +100,6 @@ export default function AdminBookings() {
     const del = async (id) => {
         if (!window.confirm("Eliminare definitivamente questa prenotazione?")) return;
         try { await api.delete(`/admin/bookings/${id}`); toast.success("Eliminata"); load(); } catch { toast.error("Errore durante l'eliminazione"); }
-    };
-
-    // LOGICA RIMBORSO
-    const openRefund = async (b) => {
-        try {
-            const r = await api.get(`/admin/bookings/${b.id}/refund-preview`);
-            setRefundDialog({ open: true, booking: b, preview: r.data, custom: String(r.data.refund) });
-        } catch { toast.error("Errore caricamento rimborso"); }
-    };
-
-    const confirmRefund = async () => {
-        setProcessing(true);
-        try {
-            const amount = parseFloat(refundDialog.custom);
-            await api.post(`/admin/bookings/${refundDialog.booking.id}/cancel-refund`, { amount: isNaN(amount) ? null : amount });
-            toast.success("Prenotazione cancellata e rimborso emesso");
-            setRefundDialog({ open: false, booking: null, preview: null, custom: "" });
-            load();
-        } catch (e) { toast.error(e?.response?.data?.detail || "Errore"); } finally { setProcessing(false); }
     };
 
     const handleManualSubmit = async (e) => {
@@ -320,10 +300,6 @@ export default function AdminBookings() {
                                                 <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
                                                     <Pencil className="w-3 h-3"/> MODIFICA
                                                 </button>
-                                                {/* AZIONE CANCELLA + RIMBORSA AGGIUNTA */}
-                                                {b.status !== "cancelled" && b.source !== "airbnb" && b.source !== "booking" && (
-                                                    <button onClick={() => openRefund(b)} className="text-amber-700 hover:underline font-bold uppercase">Cancella + Rimborsa</button>
-                                                )}
                                                 <button onClick={() => del(b.id)} className="text-red-500 hover:underline font-bold uppercase">ELIMINA</button>
                                             </div>
                                         </TableCell>
@@ -347,27 +323,6 @@ export default function AdminBookings() {
                     />
                 </TabsContent>
             </Tabs>
-
-            {/* DIALOG RIMBORSO AGGIUNTO */}
-            <Dialog open={refundDialog.open} onOpenChange={(o) => !o && setRefundDialog({ open: false, booking: null, preview: null, custom: "" })}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Cancella e rimborsa</DialogTitle></DialogHeader>
-                    <div className="space-y-4">
-                        <DialogDescription>
-                            {refundDialog.preview && (
-                                <>Pagato: €{refundDialog.preview.paid} · Rimborso suggerito: <strong>€{refundDialog.preview.refund}</strong></>
-                            )}
-                        </DialogDescription>
-                        <div className="space-y-2">
-                            <Label>Importo rimborso (€)</Label>
-                            <Input type="number" step="0.01" value={refundDialog.custom} onChange={(e) => setRefundDialog({ ...refundDialog, custom: e.target.value })} />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={confirmRefund} disabled={processing} className="bg-lake-blue w-full">Conferma e Cancella</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
