@@ -29,7 +29,6 @@ export default function AdminBookings() {
     const [filterPayment, setFilterPayment] = useState("all");
     const [filterSource, setFilterSource] = useState("all");
     
-    const [refundDialog, setRefundDialog] = useState({ open: false, booking: null, preview: null, custom: "" });
     const [manualOpen, setManualOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
 
@@ -45,7 +44,6 @@ export default function AdminBookings() {
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
     useEffect(() => { load(); }, []);
 
-    // LOGICA FILTRAGGIO CORRETTA PER AIRBNB/BOOKING
     const filtered = useMemo(() => {
         return items.filter((b) => {
             const searchTerm = search.toLowerCase();
@@ -54,12 +52,10 @@ export default function AdminBookings() {
                 (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
                 (b.id?.toString() || "").includes(searchTerm);
             
-            // Logica corretta per il filtro "Esterne": mostra Airbnb e Booking
             let matchesStatus = false;
             if (filterStatus === "all") {
                 matchesStatus = true;
             } else if (filterStatus === "external") {
-                // Seleziona se lo stato è external OPPURE se proviene da OTA
                 matchesStatus = (b.status === "external" || b.source === "airbnb" || b.source === "booking");
             } else {
                 matchesStatus = b.status === filterStatus;
@@ -67,7 +63,6 @@ export default function AdminBookings() {
             
             const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
             
-            // Specifichiamo le fonti per il filtro Fonte
             let matchesSource = false;
             if (filterSource === "all") {
                 matchesSource = true;
@@ -111,11 +106,7 @@ export default function AdminBookings() {
         e.preventDefault();
         setProcessing(true);
         try {
-            const payload = {
-                ...manualForm,
-                total_price: parseFloat(manualForm.total_price) || 0,
-            };
-
+            const payload = { ...manualForm, total_price: parseFloat(manualForm.total_price) || 0 };
             if (manualForm.id) {
                 await api.patch(`/admin/bookings/${manualForm.id}`, payload);
                 toast.success("Modificata con successo");
@@ -130,7 +121,6 @@ export default function AdminBookings() {
                 });
                 toast.success("Registrata con successo");
             }
-            
             setManualOpen(false);
             setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
             load();
@@ -204,7 +194,6 @@ export default function AdminBookings() {
                 </Dialog>
             </div>
 
-            {/* FILTRI RIGIDI */}
             <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
                 <div className="relative flex-1 min-w-[250px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
@@ -311,7 +300,7 @@ export default function AdminBookings() {
                                                 <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
                                                     <Pencil className="w-3 h-3"/> MODIFICA
                                                 </button>
-                                                <button onClick={() => del(b.id)} className="text-red-500 hover:underline font-bold">ELIMINA</button>
+                                                <button onClick={() => del(b.id)} className="text-red-500 hover:underline font-bold uppercase">ELIMINA</button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
