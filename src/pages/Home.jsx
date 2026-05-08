@@ -79,7 +79,10 @@ export default function Home() {
                     </h1>
                     <div className="mt-10 flex flex-wrap gap-4">
                         <Link to="/book" className="px-7 py-3.5 rounded-sm bg-white text-lake-ink text-sm font-medium hover:bg-lake-sand transition-colors">
-                            Verifica disponibilità
+                            {/* Mostra 'Prenota' solo su mobile (hidden sm:inline) */}
+                            <span className="inline sm:hidden">Prenota</span>
+                            {/* Mostra 'Verifica disponibilità' solo da tablet in su (hidden sm:inline) */}
+                            <span className="hidden sm:inline">Verifica disponibilità</span>
                         </Link>
                     </div>
                 </div>
@@ -139,7 +142,6 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* LIGHTBOX COMPONENT */}
                 <Lightbox
                     index={index}
                     open={index >= 0}
