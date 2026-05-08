@@ -42,7 +42,6 @@ export default function AdminBookings() {
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data));
     useEffect(() => { load(); }, []);
 
-    // Calcolo delle date occupate per il calendario
     const bookedDates = useMemo(() => {
         const dates = [];
         items.filter(b => b.status !== "cancelled").forEach(b => {
@@ -61,33 +60,68 @@ export default function AdminBookings() {
             await api.patch(`/admin/bookings/${id}`, patch);
             toast.success("Aggiornato");
             load();
-        } catch { toast.error("Errore"); }
+        } catch { toast.error("Errore durante l'aggiornamento"); }
     };
 
     const del = async (id) => {
         if (!window.confirm("Eliminare questa prenotazione?")) return;
-        try { await api.delete(`/admin/bookings/${id}`); toast.success("Eliminata"); load(); } catch { toast.error("Errore"); }
+        try { await api.delete(`/admin/bookings/${id}`); toast.success("Eliminata"); load(); } catch { toast.error("Errore durante l'eliminazione"); }
     };
 
     const handleManualSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
         try {
-            await api.post("/admin/bookings/manual", manualForm);
-            toast.success("Prenotazione registrata!");
+            const payload = {
+                ...manualForm,
+                id: `man-${Date.now()}`, 
+                status: "confirmed",
+                payment_status: "fully_paid", 
+                source: "manual",
+                total_price: parseFloat(manualForm.total_price) || 0,
+                deposit_amount: 0,
+                created_at: new Date().toISOString()
+            };
+
+            await api.post("/admin/bookings/manual", payload);
+            
+            toast.success("Prenotazione registrata con successo!");
             setManualOpen(false);
-            setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+            setManualForm({ 
+                guest_name: "", 
+                guest_email: "", 
+                check_in: "", 
+                check_out: "", 
+                total_price: "", 
+                notes: "Prenotazione manuale" 
+            });
             load();
         } catch (err) {
-            toast.error(err.response?.data?.detail || "Errore nel salvataggio");
-        } finally { setProcessing(false); }
+            console.error("Errore salvataggio:", err);
+            
+            let messaggio = "Errore nel salvataggio";
+            const detail = err.response?.data?.detail;
+
+            if (Array.isArray(detail)) {
+                const field = detail[0]?.loc[detail[0]?.loc.length - 1];
+                if (field === "guest_email") messaggio = "L'indirizzo email non è valido (es: nome@esempio.it)";
+                else if (field === "total_price") messaggio = "Inserisci un prezzo numerico valido";
+                else messaggio = `Controlla il campo: ${field}`;
+            } else if (typeof detail === 'string') {
+                messaggio = detail;
+            }
+
+            toast.error(messaggio);
+        } finally { 
+            setProcessing(false); 
+        }
     };
 
     const openRefund = async (b) => {
         try {
             const r = await api.get(`/admin/bookings/${b.id}/refund-preview`);
             setRefundDialog({ open: true, booking: b, preview: r.data, custom: String(r.data.refund) });
-        } catch { toast.error("Errore preview rimborso"); }
+        } catch { toast.error("Errore nel caricamento del rimborso"); }
     };
 
     const confirmRefund = async () => {
@@ -107,9 +141,9 @@ export default function AdminBookings() {
     const sendReminder = async (b) => {
         try {
             await api.post(`/admin/bookings/${b.id}/balance-reminder`);
-            toast.success("Promemoria inviato");
+            toast.success("Promemoria inviato all'ospite");
             load();
-        } catch (e) { toast.error(e?.response?.data?.detail || "Errore invio"); }
+        } catch (e) { toast.error(e?.response?.data?.detail || "Errore durante l'invio"); }
     };
 
     const filtered = filter === "all" ? items : items.filter((b) => b.status === filter);
@@ -140,8 +174,14 @@ export default function AdminBookings() {
                                     <Input required value={manualForm.guest_name} onChange={e => setManualForm({...manualForm, guest_name: e.target.value})} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Email (opzionale)</Label>
-                                    <Input type="email" value={manualForm.guest_email} onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} />
+                                    <Label>Email Ospite</Label>
+                                    <Input 
+                                        type="email" 
+                                        required 
+                                        placeholder="nome@esempio.it"
+                                        value={manualForm.guest_email} 
+                                        onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} 
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
@@ -155,11 +195,11 @@ export default function AdminBookings() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Prezzo Totale Accordato (€)</Label>
-                                    <Input type="number" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
+                                    <Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
                                 </div>
                                 <DialogFooter>
                                     <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                                        {processing ? "Salvataggio..." : "Conferma e Blocca Date"}
+                                        {processing ? "Salvataggio in corso..." : "Conferma e Blocca Date"}
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -281,4 +321,3 @@ export default function AdminBookings() {
         </div>
     );
 }
-// BUILD FORZATO 07-05
