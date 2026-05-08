@@ -62,7 +62,6 @@ export default function AdminBookings() {
         items.filter(b => b.status !== "cancelled").forEach(b => {
             let current = new Date(b.check_in);
             const end = new Date(b.check_out);
-            // Corretto: usiamo < invece di <= per liberare il giorno del checkout nel calendario
             while (current < end) {
                 dates.push(new Date(current));
                 current.setDate(current.getDate() + 1);
@@ -88,12 +87,23 @@ export default function AdminBookings() {
         e.preventDefault();
         setProcessing(true);
         try {
-            const payload = { ...manualForm, total_price: parseFloat(manualForm.total_price) || 0 };
+            // FIX PANORAMICA: Assicuriamo che il prezzo sia un numero e non una stringa
+            const priceAsNumber = parseFloat(manualForm.total_price) || 0;
+            const payload = { ...manualForm, total_price: priceAsNumber };
+            
             if (manualForm.id) {
                 await api.patch(`/admin/bookings/${manualForm.id}`, payload);
                 toast.success("Modificata con successo");
             } else {
-                await api.post("/admin/bookings/manual", { ...payload, id: `man-${Date.now()}`, status: "confirmed", payment_status: "fully_paid", source: "manual", created_at: new Date().toISOString() });
+                // FIX PANORAMICA: Forziamo lo status 'confirmed' per il calcolo dei ricavi
+                await api.post("/admin/bookings/manual", { 
+                    ...payload, 
+                    id: `man-${Date.now()}`, 
+                    status: "confirmed", 
+                    payment_status: "fully_paid", 
+                    source: "manual", 
+                    created_at: new Date().toISOString() 
+                });
                 toast.success("Registrata con successo");
             }
             setManualOpen(false);
@@ -206,7 +216,7 @@ export default function AdminBookings() {
                                                 <SelectContent>
                                                     <SelectItem value="pending">In attesa</SelectItem>
                                                     <SelectItem value="confirmed">Confermata</SelectItem>
-                                                    <SelectItem value="cancelled">Cancellata</SelectItem>
+                                                    <SelectItem value="cancelled">Cancellate</SelectItem>
                                                     <SelectItem value="external">Esterna</SelectItem>
                                                 </SelectContent>
                                             </Select>
