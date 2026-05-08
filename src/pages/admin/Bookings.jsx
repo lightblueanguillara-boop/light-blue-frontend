@@ -62,7 +62,8 @@ export default function AdminBookings() {
         items.filter(b => b.status !== "cancelled").forEach(b => {
             let current = new Date(b.check_in);
             const end = new Date(b.check_out);
-            while (current <= end) {
+            // Corretto: usiamo < invece di <= per liberare il giorno del checkout nel calendario
+            while (current < end) {
                 dates.push(new Date(current));
                 current.setDate(current.getDate() + 1);
             }
@@ -123,7 +124,6 @@ export default function AdminBookings() {
                 </Button>
             </div>
 
-            {/* FILTRI ORIGINALI COMPLETI */}
             <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
                 <div className="relative flex-1 min-w-[250px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
@@ -200,7 +200,6 @@ export default function AdminBookings() {
                                         </TableCell>
                                         <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
                                         
-                                        {/* MENU TENDINA STATO PRENOTAZIONE */}
                                         <TableCell>
                                             <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
                                                 <SelectTrigger className="w-32 h-8 text-[11px] font-semibold"><SelectValue /></SelectTrigger>
@@ -213,7 +212,6 @@ export default function AdminBookings() {
                                             </Select>
                                         </TableCell>
 
-                                        {/* MENU TENDINA STATO PAGAMENTO (RIPRISTINATO) */}
                                         <TableCell>
                                             <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
                                                 <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
@@ -252,7 +250,6 @@ export default function AdminBookings() {
                 </TabsContent>
             </Tabs>
 
-            {/* MODALE DETTAGLI COMPLETO CON TUTTI I DATI NOTI */}
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
                 <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
                     <DialogHeader>
@@ -262,7 +259,6 @@ export default function AdminBookings() {
 
                     {selectedBooking && (
                         <div className="space-y-6 py-4">
-                            {/* OSPITE & CONTATTI */}
                             <div className="grid grid-cols-2 gap-4 border-b pb-4">
                                 <div className="space-y-1">
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Users className="w-3 h-3"/> Ospite</Label>
@@ -279,7 +275,6 @@ export default function AdminBookings() {
                                 </div>
                             </div>
 
-                            {/* LOGISTICA E PREZZO */}
                             <div className="grid grid-cols-2 gap-4 border-b pb-4 text-sm">
                                 <div>
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Soggiorno</Label>
@@ -293,7 +288,6 @@ export default function AdminBookings() {
                                 </div>
                             </div>
 
-                            {/* NOTE/RICHIESTE SPECIALI */}
                             {selectedBooking.notes && (
                                 <div className="bg-amber-50 p-3 rounded-sm border border-amber-100 flex gap-2 italic">
                                     <FileText className="w-4 h-4 text-amber-600 shrink-0" />
@@ -301,7 +295,6 @@ export default function AdminBookings() {
                                 </div>
                             )}
 
-                            {/* IDENTIFICATIVI TECNICI (COPIABILI) */}
                             <div className="bg-slate-50 p-4 rounded-sm border border-slate-100 space-y-3">
                                 <div>
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Hash className="w-3 h-3" /> Numero Prenotazione (ID)</Label>
@@ -320,7 +313,6 @@ export default function AdminBookings() {
                 </DialogContent>
             </Dialog>
 
-            {/* MODALE INSERIMENTO MANUALE */}
             <Dialog open={manualOpen} onOpenChange={setManualOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
