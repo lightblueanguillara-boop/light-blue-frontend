@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
-import { Calendar as CalendarIcon, List, Plus, Pencil } from "lucide-react";
+import { Calendar as CalendarIcon, List, Plus, Pencil, Search, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
@@ -24,12 +24,15 @@ const statusColors = {
 
 export default function AdminBookings() {
     const [items, setItems] = useState([]);
-    const [filter, setFilter] = useState("all");
+    const [search, setSearch] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [filterPayment, setFilterPayment] = useState("all");
+    const [filterSource, setFilterSource] = useState("all");
+    
     const [refundDialog, setRefundDialog] = useState({ open: false, booking: null, preview: null, custom: "" });
     const [manualOpen, setManualOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
 
-    // Stato per nuova prenotazione manuale / modifica
     const [manualForm, setManualForm] = useState({
         guest_name: "",
         guest_email: "",
@@ -41,6 +44,22 @@ export default function AdminBookings() {
 
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data));
     useEffect(() => { load(); }, []);
+
+    // Logica di filtraggio combinata
+    const filtered = useMemo(() => {
+        return items.filter((b) => {
+            const matchesSearch = 
+                b.guest_name?.toLowerCase().includes(search.toLowerCase()) ||
+                b.guest_email?.toLowerCase().includes(search.toLowerCase()) ||
+                b.id?.toString().includes(search.toLowerCase());
+            
+            const matchesStatus = filterStatus === "all" || b.status === filterStatus;
+            const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
+            const matchesSource = filterSource === "all" || b.source === filterSource;
+
+            return matchesSearch && matchesStatus && matchesPayment && matchesSource;
+        });
+    }, [items, search, filterStatus, filterPayment, filterSource]);
 
     const bookedDates = useMemo(() => {
         const dates = [];
@@ -78,7 +97,6 @@ export default function AdminBookings() {
                 total_price: parseFloat(manualForm.total_price) || 0,
             };
 
-            // Se ha un ID, è una modifica, altrimenti è nuova
             if (manualForm.id) {
                 await api.patch(`/admin/bookings/${manualForm.id}`, payload);
                 toast.success("Prenotazione aggiornata!");
@@ -96,9 +114,7 @@ export default function AdminBookings() {
             setManualOpen(false);
             setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
             load();
-        } catch (err) {
-            toast.error("Errore nel salvataggio");
-        } finally { setProcessing(false); }
+        } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
     };
 
     const openEdit = (b) => {
@@ -143,71 +159,108 @@ export default function AdminBookings() {
         } catch (e) { toast.error(e?.response?.data?.detail || "Errore durante l'invio"); }
     };
 
-    const filtered = filter === "all" ? items : items.filter((b) => b.status === filter);
-
     return (
         <div className="p-10" data-testid="admin-bookings-page">
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
                 <div>
-                    <p className="overline">Dashboard Admin</p>
+                    <p className="overline text-lake-ink/60">Dashboard Admin</p>
                     <h1 className="font-display text-4xl text-lake-ink mt-2">Gestione prenotazioni</h1>
                 </div>
                 
-                <div className="flex gap-4">
-                    <Dialog open={manualOpen} onOpenChange={(o) => {
-                        setManualOpen(o);
-                        if(!o) setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
-                    }}>
-                        <DialogTrigger asChild>
-                            <Button className="bg-lake-blue hover:bg-lake-blue/90">
-                                <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{manualForm.id ? "Modifica Prenotazione" : "Inserimento Manuale"}</DialogTitle>
-                                <DialogDescription>Gestisci i dettagli della prenotazione e blocca le date.</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
+                <Dialog open={manualOpen} onOpenChange={(o) => {
+                    setManualOpen(o);
+                    if(!o) setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+                }}>
+                    <DialogTrigger asChild>
+                        <Button className="bg-lake-blue hover:bg-lake-blue/90">
+                            <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{manualForm.id ? "Modifica Prenotazione" : "Inserimento Manuale"}</DialogTitle>
+                            <DialogDescription>Gestisci i dettagli della prenotazione e blocca le date.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
+                            <div className="grid gap-2">
+                                <Label>Nome Ospite</Label>
+                                <Input required value={manualForm.guest_name} onChange={e => setManualForm({...manualForm, guest_name: e.target.value})} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Email Ospite</Label>
+                                <Input type="email" required placeholder="nome@esempio.it" value={manualForm.guest_email} onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
-                                    <Label>Nome Ospite</Label>
-                                    <Input required value={manualForm.guest_name} onChange={e => setManualForm({...manualForm, guest_name: e.target.value})} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Email Ospite</Label>
-                                    <Input type="email" required placeholder="nome@esempio.it" value={manualForm.guest_email} onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label>Check-in</Label>
-                                        <Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({...manualForm, check_in: e.target.value})} />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>Check-out</Label>
-                                        <Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({...manualForm, check_out: e.target.value})} />
-                                    </div>
+                                    <Label>Check-in</Label>
+                                    <Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({...manualForm, check_in: e.target.value})} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Prezzo Totale (€)</Label>
-                                    <Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
+                                    <Label>Check-out</Label>
+                                    <Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({...manualForm, check_out: e.target.value})} />
                                 </div>
-                                <DialogFooter>
-                                    <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                                        {processing ? "Salvataggio..." : "Salva Prenotazione"}
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Prezzo Totale (€)</Label>
+                                <Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                                    {processing ? "Salvataggio..." : "Salva Prenotazione"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </div>
 
-                    <Select value={filter} onValueChange={setFilter}>
-                        <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            {/* BARRA DEI FILTRI E RICERCA */}
+            <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
+                <div className="relative flex-1 min-w-[250px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
+                    <Input 
+                        placeholder="Cerca nome, email o ID..." 
+                        value={search} 
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-10 pr-10"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-lake-ink/40 hover:text-lake-ink">
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                        <SelectTrigger className="w-40 text-xs h-9"><SelectValue placeholder="Stato Prenotazione" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tutte le fonti</SelectItem>
+                            <SelectItem value="all">Tutti gli Stati</SelectItem>
                             <SelectItem value="pending">In attesa</SelectItem>
                             <SelectItem value="confirmed">Confermate</SelectItem>
                             <SelectItem value="cancelled">Cancellate</SelectItem>
                             <SelectItem value="external">Esterne (Sync)</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={filterPayment} onValueChange={setFilterPayment}>
+                        <SelectTrigger className="w-40 text-xs h-9"><SelectValue placeholder="Pagamento" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti i Pagamenti</SelectItem>
+                            <SelectItem value="unpaid">Non pagato</SelectItem>
+                            <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                            <SelectItem value="fully_paid">Saldato</SelectItem>
+                            <SelectItem value="refunded">Rimborsato</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={filterSource} onValueChange={setFilterSource}>
+                        <SelectTrigger className="w-40 text-xs h-9"><SelectValue placeholder="Fonte" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutte le Fonti</SelectItem>
+                            <SelectItem value="website">Sito Web</SelectItem>
+                            <SelectItem value="manual">Manuale</SelectItem>
+                            <SelectItem value="external">Esterna (OTA)</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -269,7 +322,7 @@ export default function AdminBookings() {
                                         <TableCell className="text-xs uppercase font-bold text-lake-blue">{b.source}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-col gap-1 text-xs">
-                                                <button onClick={() => openEdit(b)} className="text-lake-ink hover:underline text-left flex items-center gap-1">
+                                                <button onClick={() => openEdit(b)} className="text-lake-ink hover:underline text-left flex items-center gap-1 font-medium">
                                                     <Pencil className="w-3 h-3"/> Modifica
                                                 </button>
                                                 {b.payment_status === "deposit_paid" && (
@@ -283,6 +336,13 @@ export default function AdminBookings() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                                {filtered.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-32 text-center text-lake-ink/50 italic">
+                                            Nessuna prenotazione trovata con i filtri attuali.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
