@@ -30,7 +30,6 @@ export default function Booking() {
     });
     const [submitting, setSubmitting] = useState(false);
 
-    // Stato per gestire il numero di mesi in base alla larghezza schermo
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
     useEffect(() => {
@@ -84,7 +83,6 @@ export default function Booking() {
         <div className="bg-lake-cream min-h-screen w-full overflow-x-hidden">
             <Header />
             
-            {/* Titolo: centrato su mobile, a sinistra su desktop */}
             <section className="mx-auto max-w-7xl px-6 sm:px-10 pt-8 md:pt-12 pb-6 text-center md:text-left">
                 <p className="overline text-xs md:text-sm">Prenota il tuo soggiorno</p>
                 <h1 className="font-display text-3xl md:text-5xl text-lake-ink mt-3 tracking-tight">
@@ -92,18 +90,16 @@ export default function Booking() {
                 </h1>
             </section>
 
-            {/* Grid: 1 colonna su mobile, 12 colonne su desktop */}
-            <section className="mx-auto max-w-7xl px-4 sm:px-10 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+            <section className="mx-auto max-w-7xl px-4 sm:px-10 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
                 
-                {/* CALENDARIO */}
-                <div className="lg:col-span-7 bg-white border border-lake-border rounded-sm p-2 sm:p-8 flex justify-center items-center overflow-hidden" data-testid="booking-calendar">
+                {/* CALENDARIO: rimosso items-center per evitare lo spazio vuoto in alto su PC */}
+                <div className="lg:col-span-7 bg-white border border-lake-border rounded-sm p-2 sm:p-8 flex justify-center overflow-hidden" data-testid="booking-calendar">
                     <DayPicker
                         mode="range"
                         locale={it}
                         selected={range}
                         onSelect={setRange}
                         disabled={[{ before: minDate }, ...blocked]}
-                        // 1 mese su mobile, 2 mesi su desktop
                         numberOfMonths={isMobile ? 1 : 2}
                         showOutsideDays={false}
                         weekStartsOn={1}
@@ -125,7 +121,6 @@ export default function Booking() {
                             <Input data-testid="guest-email" required type="email" placeholder="Email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} />
                             <Input data-testid="guest-phone" placeholder="Telefono (opzionale)" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} />
                             
-                            {/* Griglia adulti/bambini: 1 colonna su mobile, 2 su tablet/desktop */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <Input data-testid="guest-adults" type="number" min={1} max={8} placeholder="Adulti" value={form.adults} onChange={(e) => setForm({ ...form, adults: parseInt(e.target.value || 0) })} />
                                 <Input data-testid="guest-children" type="number" min={0} max={6} placeholder="Bambini" value={form.children} onChange={(e) => setForm({ ...form, children: parseInt(e.target.value || 0) })} />
