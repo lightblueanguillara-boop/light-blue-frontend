@@ -45,7 +45,7 @@ export default function AdminBookings() {
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
     useEffect(() => { load(); }, []);
 
-    // LOGICA FILTRAGGIO BLINDATA
+    // LOGICA FILTRAGGIO CORRETTA PER AIRBNB/BOOKING
     const filtered = useMemo(() => {
         return items.filter((b) => {
             const searchTerm = search.toLowerCase();
@@ -54,12 +54,28 @@ export default function AdminBookings() {
                 (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
                 (b.id?.toString() || "").includes(searchTerm);
             
-            // Correzione filtro Esterne: controlla sia lo status che la source
-            const matchesStatus = filterStatus === "all" || 
-                                 (filterStatus === "external" ? (b.status === "external" || b.source === "external") : b.status === filterStatus);
+            // Logica corretta per il filtro "Esterne": mostra Airbnb e Booking
+            let matchesStatus = false;
+            if (filterStatus === "all") {
+                matchesStatus = true;
+            } else if (filterStatus === "external") {
+                // Seleziona se lo stato è external OPPURE se proviene da OTA
+                matchesStatus = (b.status === "external" || b.source === "airbnb" || b.source === "booking.com");
+            } else {
+                matchesStatus = b.status === filterStatus;
+            }
             
             const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
-            const matchesSource = filterSource === "all" || b.source === filterSource;
+            
+            // Specifichiamo le fonti per il filtro Fonte
+            let matchesSource = false;
+            if (filterSource === "all") {
+                matchesSource = true;
+            } else if (filterSource === "external") {
+                matchesSource = (b.source === "airbnb" || b.source === "booking.com" || b.source === "external");
+            } else {
+                matchesSource = b.source === filterSource;
+            }
 
             return matchesSearch && matchesStatus && matchesPayment && matchesSource;
         });
@@ -208,7 +224,7 @@ export default function AdminBookings() {
                             <SelectItem value="pending">In attesa</SelectItem>
                             <SelectItem value="confirmed">Confermate</SelectItem>
                             <SelectItem value="cancelled">Cancellate</SelectItem>
-                            <SelectItem value="external">Esterne (Sync)</SelectItem>
+                            <SelectItem value="external">Esterne (Airbnb/Booking)</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -228,7 +244,7 @@ export default function AdminBookings() {
                             <SelectItem value="all">Tutte le fonti</SelectItem>
                             <SelectItem value="website">Sito Web</SelectItem>
                             <SelectItem value="manual">Manuale</SelectItem>
-                            <SelectItem value="external">OTA/Esterna</SelectItem>
+                            <SelectItem value="external">Esterne (Sync)</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
