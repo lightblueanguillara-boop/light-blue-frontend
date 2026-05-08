@@ -42,7 +42,6 @@ export default function AdminBookings() {
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data));
     useEffect(() => { load(); }, []);
 
-    // Calcolo delle date occupate per il calendario
     const bookedDates = useMemo(() => {
         const dates = [];
         items.filter(b => b.status !== "cancelled").forEach(b => {
@@ -73,14 +72,40 @@ export default function AdminBookings() {
         e.preventDefault();
         setProcessing(true);
         try {
-            await api.post("/admin/bookings/manual", manualForm);
+            // Costruiamo il payload completo per evitare l'errore 422
+            const payload = {
+                ...manualForm,
+                id: `man-${Date.now()}`, // ID univoco per il database
+                status: "confirmed",
+                payment_status: "paid", // Di default consideriamo il manuale come pagato
+                source: "manual",
+                total_price: parseFloat(manualForm.total_price) || 0,
+                deposit_amount: 0,
+                created_at: new Date().toISOString()
+            };
+
+            await api.post("/admin/bookings/manual", payload);
+            
             toast.success("Prenotazione registrata!");
             setManualOpen(false);
-            setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+            setManualForm({ 
+                guest_name: "", 
+                guest_email: "", 
+                check_in: "", 
+                check_out: "", 
+                total_price: "", 
+                notes: "Prenotazione manuale" 
+            });
             load();
         } catch (err) {
-            toast.error(err.response?.data?.detail || "Errore nel salvataggio");
-        } finally { setProcessing(false); }
+            console.error("Errore salvataggio manuale:", err);
+            // Prevenzione pagina bianca: mostriamo l'errore nel toast
+            const detail = err.response?.data?.detail;
+            const errorMsg = typeof detail === 'object' ? JSON.stringify(detail) : detail;
+            toast.error(errorMsg || "Errore: controlla che tutti i campi siano compilati correttamente");
+        } finally { 
+            setProcessing(false); 
+        }
     };
 
     const openRefund = async (b) => {
@@ -155,7 +180,7 @@ export default function AdminBookings() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Prezzo Totale Accordato (€)</Label>
-                                    <Input type="number" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
+                                    <Input required type="number" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
                                 </div>
                                 <DialogFooter>
                                     <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">
@@ -281,4 +306,3 @@ export default function AdminBookings() {
         </div>
     );
 }
-// BUILD FORZATO 07-05
