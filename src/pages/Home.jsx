@@ -36,7 +36,7 @@ export default function Home() {
     const [form, setForm] = useState({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
     const [sending, setSending] = useState(false);
     
-    // Stato per gestire l'apertura della galleria (indice dell'immagine selezionata)
+    // Stato per gestire l'apertura della galleria
     const [index, setIndex] = useState(-1);
 
     useEffect(() => {
@@ -68,7 +68,7 @@ export default function Home() {
         <div className="bg-lake-cream min-h-screen font-sans">
             <Header />
 
-            {/* HERO */}
+            {/* HERO SECTION */}
             <section className="relative h-[88vh] w-full overflow-hidden">
                 <img src={HERO} alt="Lago di Bracciano" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/55" />
@@ -78,10 +78,16 @@ export default function Home() {
                         Una piccola perla sul Lago di Bracciano.
                     </h1>
                     <div className="mt-10 flex flex-wrap gap-4">
-                        <Link to="/book" className="px-7 py-3.5 rounded-sm bg-white text-lake-ink text-sm font-medium hover:bg-lake-sand transition-colors">
-                            {/* Mostra 'Prenota' solo su mobile (hidden sm:inline) */}
-                            <span className="inline sm:hidden">Prenota</span>
-                            {/* Mostra 'Verifica disponibilità' solo da tablet in su (hidden sm:inline) */}
+                        <Link 
+                            to="/book" 
+                            className="px-7 py-3.5 rounded-sm font-medium transition-colors 
+                                       bg-lake-blue text-white 
+                                       sm:bg-white sm:text-lake-ink sm:hover:bg-lake-sand"
+                        >
+                            {/* Testo mobile */}
+                            <span className="inline sm:hidden">Prenota ora</span>
+                            
+                            {/* Testo desktop */}
                             <span className="hidden sm:inline">Verifica disponibilità</span>
                         </Link>
                     </div>
@@ -106,7 +112,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* GALLERY MASONRY */}
+            {/* GALLERY */}
             <section id="gallery" className="mx-auto max-w-7xl px-6 sm:px-10 py-16">
                 <div className="mb-10">
                     <p className="overline text-lake-blue">Galleria</p>
@@ -185,7 +191,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* CONTACT */}
+            {/* CONTACT FORM */}
             <section id="contact" className="mx-auto max-w-4xl px-6 sm:px-10 py-28">
                 <div className="text-center mb-12">
                     <p className="overline text-lake-blue">Contatti</p>
