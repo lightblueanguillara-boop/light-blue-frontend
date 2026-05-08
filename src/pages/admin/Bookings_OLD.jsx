@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
-import { Calendar as CalendarIcon, List, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, List, Plus, Pencil } from "lucide-react";
 import { api } from "../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
@@ -13,7 +13,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { fmtItDate, toIsoDate } from "../../lib/date";
+import { fmtItDate } from "../../lib/date";
 
 const statusColors = {
     pending: "bg-amber-100 text-amber-700",
@@ -29,7 +29,7 @@ export default function AdminBookings() {
     const [manualOpen, setManualOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
 
-    // Stato per nuova prenotazione manuale
+    // Stato per nuova prenotazione manuale / modifica
     const [manualForm, setManualForm] = useState({
         guest_name: "",
         guest_email: "",
@@ -74,47 +74,44 @@ export default function AdminBookings() {
         try {
             const payload = {
                 ...manualForm,
-                id: `man-${Date.now()}`, 
                 status: "confirmed",
-                payment_status: "fully_paid", 
-                source: "manual",
                 total_price: parseFloat(manualForm.total_price) || 0,
-                deposit_amount: 0,
-                created_at: new Date().toISOString()
             };
 
-            await api.post("/admin/bookings/manual", payload);
+            // Se ha un ID, è una modifica, altrimenti è nuova
+            if (manualForm.id) {
+                await api.patch(`/admin/bookings/${manualForm.id}`, payload);
+                toast.success("Prenotazione aggiornata!");
+            } else {
+                await api.post("/admin/bookings/manual", {
+                    ...payload,
+                    id: `man-${Date.now()}`,
+                    payment_status: "fully_paid",
+                    source: "manual",
+                    created_at: new Date().toISOString()
+                });
+                toast.success("Prenotazione registrata!");
+            }
             
-            toast.success("Prenotazione registrata con successo!");
             setManualOpen(false);
-            setManualForm({ 
-                guest_name: "", 
-                guest_email: "", 
-                check_in: "", 
-                check_out: "", 
-                total_price: "", 
-                notes: "Prenotazione manuale" 
-            });
+            setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
             load();
         } catch (err) {
-            console.error("Errore salvataggio:", err);
-            
-            let messaggio = "Errore nel salvataggio";
-            const detail = err.response?.data?.detail;
+            toast.error("Errore nel salvataggio");
+        } finally { setProcessing(false); }
+    };
 
-            if (Array.isArray(detail)) {
-                const field = detail[0]?.loc[detail[0]?.loc.length - 1];
-                if (field === "guest_email") messaggio = "L'indirizzo email non è valido (es: nome@esempio.it)";
-                else if (field === "total_price") messaggio = "Inserisci un prezzo numerico valido";
-                else messaggio = `Controlla il campo: ${field}`;
-            } else if (typeof detail === 'string') {
-                messaggio = detail;
-            }
-
-            toast.error(messaggio);
-        } finally { 
-            setProcessing(false); 
-        }
+    const openEdit = (b) => {
+        setManualForm({
+            id: b.id,
+            guest_name: b.guest_name,
+            guest_email: b.guest_email,
+            check_in: b.check_in,
+            check_out: b.check_out,
+            total_price: String(b.total_price),
+            notes: b.notes || ""
+        });
+        setManualOpen(true);
     };
 
     const openRefund = async (b) => {
@@ -157,7 +154,10 @@ export default function AdminBookings() {
                 </div>
                 
                 <div className="flex gap-4">
-                    <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+                    <Dialog open={manualOpen} onOpenChange={(o) => {
+                        setManualOpen(o);
+                        if(!o) setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+                    }}>
                         <DialogTrigger asChild>
                             <Button className="bg-lake-blue hover:bg-lake-blue/90">
                                 <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
@@ -165,8 +165,8 @@ export default function AdminBookings() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Inserimento Manuale (Telefonica/Diretta)</DialogTitle>
-                                <DialogDescription>Registra una prenotazione avvenuta fuori dal sito.</DialogDescription>
+                                <DialogTitle>{manualForm.id ? "Modifica Prenotazione" : "Inserimento Manuale"}</DialogTitle>
+                                <DialogDescription>Gestisci i dettagli della prenotazione e blocca le date.</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
                                 <div className="grid gap-2">
@@ -175,13 +175,7 @@ export default function AdminBookings() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Email Ospite</Label>
-                                    <Input 
-                                        type="email" 
-                                        required 
-                                        placeholder="nome@esempio.it"
-                                        value={manualForm.guest_email} 
-                                        onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} 
-                                    />
+                                    <Input type="email" required placeholder="nome@esempio.it" value={manualForm.guest_email} onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
@@ -194,12 +188,12 @@ export default function AdminBookings() {
                                     </div>
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Prezzo Totale Accordato (€)</Label>
+                                    <Label>Prezzo Totale (€)</Label>
                                     <Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} />
                                 </div>
                                 <DialogFooter>
                                     <Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                                        {processing ? "Salvataggio in corso..." : "Conferma e Blocca Date"}
+                                        {processing ? "Salvataggio..." : "Salva Prenotazione"}
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -222,7 +216,7 @@ export default function AdminBookings() {
             <Tabs defaultValue="list" className="w-full">
                 <TabsList className="mb-4">
                     <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
-                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario Visivo</TabsTrigger>
+                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="list">
@@ -233,8 +227,8 @@ export default function AdminBookings() {
                                     <TableHead>Ospite</TableHead>
                                     <TableHead>Date</TableHead>
                                     <TableHead>Totale</TableHead>
-                                    <TableHead>Stato</TableHead>
-                                    <TableHead>Pagamento</TableHead>
+                                    <TableHead>Stato Prenotazione</TableHead>
+                                    <TableHead>Stato Pagamento</TableHead>
                                     <TableHead>Fonte</TableHead>
                                     <TableHead>Azioni</TableHead>
                                 </TableRow>
@@ -246,11 +240,11 @@ export default function AdminBookings() {
                                             <p className="font-medium text-lake-ink">{b.guest_name}</p>
                                             <p className="text-xs text-lake-ink/60">{b.guest_email}</p>
                                         </TableCell>
-                                        <TableCell className="text-sm">{fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}</TableCell>
-                                        <TableCell className="text-sm">€{b.total_price}</TableCell>
+                                        <TableCell className="text-sm whitespace-nowrap">{fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}</TableCell>
+                                        <TableCell className="text-sm font-bold">€{b.total_price}</TableCell>
                                         <TableCell>
                                             <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
-                                                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                                                <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="pending">In attesa</SelectItem>
                                                     <SelectItem value="confirmed">Confermata</SelectItem>
@@ -260,18 +254,31 @@ export default function AdminBookings() {
                                             </Select>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={statusColors[b.status] || ""}>{b.payment_status}</Badge>
+                                            <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
+                                                <SelectTrigger className="w-36 h-8 text-xs">
+                                                    <Badge className={statusColors[b.status] || ""}>{b.payment_status}</Badge>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unpaid">Non pagato</SelectItem>
+                                                    <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                                                    <SelectItem value="fully_paid">Saldato</SelectItem>
+                                                    <SelectItem value="refunded">Rimborsato</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </TableCell>
                                         <TableCell className="text-xs uppercase font-bold text-lake-blue">{b.source}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-col gap-1 text-xs">
+                                                <button onClick={() => openEdit(b)} className="text-lake-ink hover:underline text-left flex items-center gap-1">
+                                                    <Pencil className="w-3 h-3"/> Modifica
+                                                </button>
                                                 {b.payment_status === "deposit_paid" && (
                                                     <button onClick={() => sendReminder(b)} className="text-lake-blue hover:underline text-left">Invia reminder saldo</button>
                                                 )}
                                                 {b.status !== "cancelled" && b.source !== "external" && (
                                                     <button onClick={() => openRefund(b)} className="text-amber-700 hover:underline text-left">Cancella + Rimborsa</button>
                                                 )}
-                                                <button onClick={() => del(b.id)} className="text-red-600 hover:underline text-left">Elimina</button>
+                                                <button onClick={() => del(b.id)} className="text-red-600 hover:underline text-left font-semibold">Elimina</button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -297,18 +304,18 @@ export default function AdminBookings() {
 
             <Dialog open={refundDialog.open} onOpenChange={(o) => !o && setRefundDialog({ open: false, booking: null, preview: null, custom: "" })}>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Cancella e rimborsa</DialogTitle>
+                    <DialogHeader><DialogTitle>Cancella e rimborsa</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
                         <DialogDescription>
                             {refundDialog.preview && (
                                 <>Policy: <strong>{refundDialog.booking?.cancellation_policy}</strong><br/>
                                 Pagato: €{refundDialog.preview.paid} · Rimborso suggerito: <strong>€{refundDialog.preview.refund}</strong></>
                             )}
                         </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-2">
-                        <Label>Importo rimborso (€)</Label>
-                        <Input type="number" step="0.01" value={refundDialog.custom} onChange={(e) => setRefundDialog({ ...refundDialog, custom: e.target.value })} />
+                        <div className="space-y-2">
+                            <Label>Importo rimborso (€)</Label>
+                            <Input type="number" step="0.01" value={refundDialog.custom} onChange={(e) => setRefundDialog({ ...refundDialog, custom: e.target.value })} />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setRefundDialog({ open: false, booking: null, preview: null, custom: "" })}>Annulla</Button>
