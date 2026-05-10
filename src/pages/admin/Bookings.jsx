@@ -1,208 +1,343 @@
-import React, { useState, useEffect } from 'react';
-import { 
-    Plus, Search, Filter, Calendar as CalendarIcon, 
-    List, MoreHorizontal, Mail, Phone, Users, 
-    Info, Pencil, Trash2, CheckCircle2, Clock, AlertCircle
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { DayPicker } from 'react-day-picker';
-
-// CORREZIONE IMPORT: Usiamo ../ invece di ../../ come richiesto da Railway
-import { getBookings, createBooking, updateBooking, deleteBooking } from '../lib/api';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { 
-    Dialog, DialogContent, DialogHeader, DialogTitle, 
-    DialogDescription, DialogFooter, DialogTrigger 
-} from '../components/ui/dialog';
-import { 
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from '../components/ui/select';
-import { 
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from '../components/ui/table';
-import { Badge } from '../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
+import { DayPicker } from "react-day-picker";
+import { it } from "date-fns/locale";
+import "react-day-picker/dist/style.css";
+import { Calendar as CalendarIcon, List, Plus, Pencil, Search, X, Info, CreditCard, Hash, Users, Phone, Mail, FileText } from "lucide-react";
+import { api } from "../../lib/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Badge } from "../../components/ui/badge";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Button } from "../../components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { fmtItDate } from "../../lib/date";
 
 const statusColors = {
-    pending: "bg-amber-100 text-amber-700 border-amber-200",
-    confirmed: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    cancelled: "bg-rose-100 text-rose-700 border-rose-200",
-    external: "bg-sky-100 text-sky-700 border-sky-200"
+    pending: "bg-amber-100 text-amber-700",
+    confirmed: "bg-emerald-100 text-emerald-700",
+    cancelled: "bg-rose-100 text-rose-700",
+    external: "bg-slate-100 text-slate-700",
 };
 
-export default function Booking() {
-    const [bookings, setBookings] = useState([]);
+export default function AdminBookings() {
+    const [items, setItems] = useState([]);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [filterPayment, setFilterPayment] = useState("all");
+    const [filterSource, setFilterSource] = useState("all");
     
-    // Stato per il nuovo form
-    const [formData, setFormData] = useState({
-        guest_name: '',
-        guest_email: '',
-        guest_phone: '', // CAMPO TELEFONO AGGIUNTO
-        check_in: '',
-        check_out: '',
-        total_price: '',
-        status: 'pending',
-        source: 'manual'
+    const [manualOpen, setManualOpen] = useState(false);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [processing, setProcessing] = useState(false);
+
+    const [manualForm, setManualForm] = useState({
+        guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale"
     });
 
-    useEffect(() => {
-        loadBookings();
-    }, []);
+    const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
+    useEffect(() => { load(); }, []);
 
-    const loadBookings = async () => {
+    const filtered = useMemo(() => {
+        return items.filter((b) => {
+            const searchTerm = search.toLowerCase();
+            const matchesSearch = 
+                (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
+                (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
+                (b.id?.toString() || "").includes(searchTerm);
+            
+            let matchesStatus = filterStatus === "all" || (filterStatus === "external" ? (b.status === "external" || b.source === "airbnb" || b.source === "booking") : b.status === filterStatus);
+            const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
+            let matchesSource = filterSource === "all" || (filterSource === "external" ? (b.source === "airbnb" || b.source === "booking" || b.source === "external") : b.source === filterSource);
+
+            return matchesSearch && matchesStatus && matchesPayment && matchesSource;
+        });
+    }, [items, search, filterStatus, filterPayment, filterSource]);
+
+    const bookedDates = useMemo(() => {
+        const dates = [];
+        items.filter(b => b.status !== "cancelled").forEach(b => {
+            let current = new Date(b.check_in);
+            const end = new Date(b.check_out);
+            while (current < end) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+        });
+        return dates;
+    }, [items]);
+
+    const update = async (id, patch) => {
         try {
-            const data = await getBookings();
-            setBookings(data);
-        } catch (err) {
-            console.error("Errore caricamento:", err);
-        }
+            await api.patch(`/admin/bookings/${id}`, patch);
+            toast.success("Aggiornato");
+            load();
+        } catch { toast.error("Errore durante l'aggiornamento"); }
     };
 
-    const handleCreate = async (e) => {
+    const del = async (id) => {
+        if (!window.confirm("Eliminare definitivamente questa prenotazione?")) return;
+        try { await api.delete(`/admin/bookings/${id}`); toast.success("Eliminata"); load(); } catch { toast.error("Errore durante l'eliminazione"); }
+    };
+
+    const handleManualSubmit = async (e) => {
         e.preventDefault();
+        setProcessing(true);
         try {
-            await createBooking(formData);
-            setIsCreateOpen(false);
-            loadBookings();
-            setFormData({ guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', total_price: '', status: 'pending', source: 'manual' });
-        } catch (err) {
-            alert("Errore durante la creazione");
-        }
+            // FIX PANORAMICA: Assicuriamo che il prezzo sia un numero e non una stringa
+            const priceAsNumber = parseFloat(manualForm.total_price) || 0;
+            const payload = { ...manualForm, total_price: priceAsNumber };
+            
+            if (manualForm.id) {
+                await api.patch(`/admin/bookings/${manualForm.id}`, payload);
+                toast.success("Modificata con successo");
+            } else {
+                // FIX PANORAMICA: Forziamo lo status 'confirmed' per il calcolo dei ricavi
+                await api.post("/admin/bookings/manual", { 
+                    ...payload, 
+                    id: `man-${Date.now()}`, 
+                    status: "confirmed", 
+                    payment_status: "fully_paid", 
+                    source: "manual", 
+                    created_at: new Date().toISOString() 
+                });
+                toast.success("Registrata con successo");
+            }
+            setManualOpen(false);
+            setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+            load();
+        } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
     };
 
-    const filtered = bookings.filter(b => {
-        const matchesSearch = b.guest_name.toLowerCase().includes(search.toLowerCase()) || 
-                             (b.guest_phone && b.guest_phone.includes(search));
-        const matchesStatus = filterStatus === "all" || b.status === filterStatus;
-        return matchesSearch && matchesStatus;
-    });
+    const openEdit = (b) => {
+        setManualForm({ id: b.id, guest_name: b.guest_name || "", guest_email: b.guest_email || "", check_in: b.check_in || "", check_out: b.check_out || "", total_price: String(b.total_price || 0), notes: b.notes || "" });
+        setManualOpen(true);
+    };
 
-    const fmtItDate = (d) => format(new Date(d), 'dd MMM yyyy', { locale: it });
+    const openDetail = (b) => {
+        setSelectedBooking(b);
+        setDetailOpen(true);
+    };
 
     return (
-        <div className="p-6 space-y-6 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-10" data-testid="admin-bookings-page">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-display font-bold text-lake-ink tracking-tight">Prenotazioni</h1>
-                    <p className="text-slate-500 text-sm">Gestisci i tuoi ospiti e le disponibilità.</p>
+                    <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
+                    <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
                 </div>
+                <Button onClick={() => setManualOpen(true)} className="bg-lake-blue hover:bg-lake-blue/90">
+                    <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
+                </Button>
+            </div>
 
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-lake-blue hover:bg-lake-blue/90 text-white font-bold px-6 shadow-lg shadow-lake-blue/20">
-                            <Plus className="w-4 h-4 mr-2" /> NUOVA PRENOTAZIONE
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                        <form onSubmit={handleCreate}>
-                            <DialogHeader>
-                                <DialogTitle>Inserisci Nuova Prenotazione</DialogTitle>
-                                <DialogDescription>Aggiungi manualmente un ospite al calendario.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Nome Ospite</Label>
-                                        <Input required value={formData.guest_name} onChange={e => setFormData({...formData, guest_name: e.target.value})} placeholder="Mario Rossi" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Telefono</Label>
-                                        <Input value={formData.guest_phone} onChange={e => setFormData({...formData, guest_phone: e.target.value})} placeholder="+39..." />
+            <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
+                <div className="relative flex-1 min-w-[250px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
+                    <Input placeholder="Cerca per nome, email o ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Stato" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti gli stati</SelectItem>
+                            <SelectItem value="pending">In attesa</SelectItem>
+                            <SelectItem value="confirmed">Confermate</SelectItem>
+                            <SelectItem value="cancelled">Cancellate</SelectItem>
+                            <SelectItem value="external">Esterne (Airbnb/Booking)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={filterPayment} onValueChange={setFilterPayment}>
+                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Pagamento" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti i pagamenti</SelectItem>
+                            <SelectItem value="unpaid">Non pagato</SelectItem>
+                            <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                            <SelectItem value="fully_paid">Saldato</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={filterSource} onValueChange={setFilterSource}>
+                        <SelectTrigger className="w-32 text-xs h-10"><SelectValue placeholder="Fonte" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutte le fonti</SelectItem>
+                            <SelectItem value="website">Sito Web</SelectItem>
+                            <SelectItem value="manual">Manuale</SelectItem>
+                            <SelectItem value="external">Esterne (Sync)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            <Tabs defaultValue="list" className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
+                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="list">
+                    <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
+                                    <TableHead>Ospite</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Importo</TableHead>
+                                    <TableHead>Stato Prenotazione</TableHead>
+                                    <TableHead>Stato Pagamento</TableHead>
+                                    <TableHead>Fonte</TableHead>
+                                    <TableHead className="text-right">Azioni</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.map((b) => (
+                                    <TableRow key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <TableCell>
+                                            <button onClick={() => openDetail(b)} className="text-left group flex flex-col">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="font-bold text-lake-ink group-hover:text-lake-blue transition-colors underline decoration-dotted underline-offset-4 tracking-tight">
+                                                        {b.guest_name}
+                                                    </span>
+                                                    <Info className="w-3 h-3 text-lake-ink/20 group-hover:text-lake-blue" />
+                                                </div>
+                                                <span className="text-[10px] text-lake-ink/50 uppercase">{b.guest_email}</span>
+                                            </button>
+                                        </TableCell>
+                                        <TableCell className="text-sm font-medium whitespace-nowrap italic text-slate-600 tracking-tight">
+                                            {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
+                                        </TableCell>
+                                        <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
+                                        
+                                        <TableCell>
+                                            <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
+                                                <SelectTrigger className="w-32 h-8 text-[11px] font-semibold"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="pending">In attesa</SelectItem>
+                                                    <SelectItem value="confirmed">Confermata</SelectItem>
+                                                    <SelectItem value="cancelled">Cancellate</SelectItem>
+                                                    <SelectItem value="external">Esterna</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+
+                                        <TableCell>
+                                            <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
+                                                <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
+                                                    <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold w-full justify-center`}>
+                                                        {b.payment_status}
+                                                    </Badge>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unpaid">Non pagato</SelectItem>
+                                                    <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                                                    <SelectItem value="fully_paid">Saldato</SelectItem>
+                                                    <SelectItem value="refunded">Rimborsato</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+
+                                        <TableCell className="text-[10px] uppercase font-black text-lake-ink/40 tracking-widest">{b.source}</TableCell>
+                                        
+                                        <TableCell className="text-right">
+                                            <div className="flex flex-col items-end gap-1 text-[11px]">
+                                                <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
+                                                    <Pencil className="w-3 h-3"/> MODIFICA
+                                                </button>
+                                                <button onClick={() => del(b.id)} className="text-red-500 hover:underline font-bold uppercase tracking-tighter">ELIMINA</button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="calendar" className="bg-white border border-lake-border rounded-sm p-10 flex justify-center">
+                    <DayPicker mode="multiple" locale={it} modifiers={{ booked: bookedDates }} modifiersStyles={{ booked: { backgroundColor: "#ef4444", color: "white", borderRadius: 0 } }} numberOfMonths={3} className="admin-calendar" />
+                </TabsContent>
+            </Tabs>
+
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-display text-lake-ink">Scheda Dettagliata</DialogTitle>
+                        <DialogDescription>Informazioni complete sulla prenotazione e dati tecnici.</DialogDescription>
+                    </DialogHeader>
+
+                    {selectedBooking && (
+                        <div className="space-y-6 py-4">
+                            <div className="grid grid-cols-2 gap-4 border-b pb-4">
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Users className="w-3 h-3"/> Ospite</Label>
+                                    <p className="font-bold text-lg text-lake-ink leading-tight">{selectedBooking.guest_name}</p>
+                                    <div className="flex flex-col gap-0.5 mt-1">
+                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3"/> {selectedBooking.guest_email}</span>
+                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3"/> {selectedBooking.guest_phone || "N/A"}</span>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Email</Label>
-                                    <Input type="email" value={formData.guest_email} onChange={e => setFormData({...formData, guest_email: e.target.value})} placeholder="mario@esempio.com" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Check-in</Label>
-                                        <Input type="date" required value={formData.check_in} onChange={e => setFormData({...formData, check_in: e.target.value})} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Check-out</Label>
-                                        <Input type="date" required value={formData.check_out} onChange={e => setFormData({...formData, check_out: e.target.value})} />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Prezzo Totale (€)</Label>
-                                    <Input type="number" required value={formData.total_price} onChange={e => setFormData({...formData, total_price: e.target.value})} placeholder="0.00" />
+                                <div className="text-right">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Ospiti / Fonte</Label>
+                                    <p className="font-bold text-xl text-lake-ink">{selectedBooking.num_guests || 1} Persone</p>
+                                    <Badge variant="outline" className="mt-2 uppercase text-[9px] font-black tracking-widest">{selectedBooking.source}</Badge>
                                 </div>
                             </div>
-                            <DialogFooter>
-                                <Button type="submit" className="w-full bg-lake-blue text-white">SALVA PRENOTAZIONE</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
 
-            <div className="flex flex-col md:flex-row gap-4 bg-white p-4 border border-lake-border rounded-sm shadow-sm">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input placeholder="Cerca ospite o telefono..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10" />
-                </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Stato" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tutti gli stati</SelectItem>
-                        <SelectItem value="pending">In attesa</SelectItem>
-                        <SelectItem value="confirmed">Confermate</SelectItem>
-                        <SelectItem value="cancelled">Cancellate</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                            <div className="grid grid-cols-2 gap-4 border-b pb-4 text-sm">
+                                <div>
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Soggiorno</Label>
+                                    <p className="font-bold text-lake-ink">{fmtItDate(selectedBooking.check_in)}</p>
+                                    <p className="font-bold text-lake-ink">{fmtItDate(selectedBooking.check_out)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Totale Pagato</Label>
+                                    <p className="font-bold text-2xl text-lake-blue">€{selectedBooking.total_price}</p>
+                                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{selectedBooking.payment_status}</p>
+                                </div>
+                            </div>
 
-            <div className="bg-white border border-lake-border rounded-sm overflow-hidden shadow-sm">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
-                            <TableHead>Ospite</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Importo</TableHead>
-                            <TableHead>Stato</TableHead>
-                            <TableHead className="text-right">Azioni</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filtered.map((b) => (
-                            <TableRow key={b.id} className="hover:bg-slate-50/50">
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-lake-ink">{b.guest_name}</span>
-                                        <span className="text-[10px] text-slate-500 uppercase">{b.guest_email}</span>
-                                        {b.guest_phone && (
-                                            <span className="text-[9px] text-lake-blue font-semibold flex items-center gap-1">
-                                                <Phone className="w-2 h-2"/> {b.guest_phone}
-                                            </span>
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-sm italic text-slate-600">
-                                    {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
-                                </TableCell>
-                                <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
-                                <TableCell>
-                                    <Badge className={`${statusColors[b.status]} border-none text-[10px] uppercase font-bold`}>
-                                        {b.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm" onClick={() => deleteBooking(b.id).then(loadBookings)} className="text-red-500 hover:text-red-700">
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+                            {selectedBooking.notes && (
+                                <div className="bg-amber-50 p-3 rounded-sm border border-amber-100 flex gap-2 italic">
+                                    <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                                    <div className="text-sm text-amber-900 leading-relaxed">"{selectedBooking.notes}"</div>
+                                </div>
+                            )}
+
+                            <div className="bg-slate-50 p-4 rounded-sm border border-slate-100 space-y-3">
+                                <div>
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Hash className="w-3 h-3" /> Numero Prenotazione (ID)</Label>
+                                    <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-lake-ink border-slate-200">{selectedBooking.id}</code>
+                                </div>
+                                <div>
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CreditCard className="w-3 h-3" /> Stripe Payment ID</Label>
+                                    <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-emerald-700 font-bold border-slate-200 uppercase tracking-tighter">
+                                        {selectedBooking.stripe_payment_intent_id || "NON DISPONIBILE"}
+                                    </code>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter><Button onClick={() => setDetailOpen(false)} className="w-full bg-lake-ink hover:bg-lake-ink/90">Chiudi</Button></DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
+                    <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
+                        <div className="grid gap-2"><Label>Nome Ospite</Label><Input required value={manualForm.guest_name} onChange={e => setManualForm({...manualForm, guest_name: e.target.value})} /></div>
+                        <div className="grid gap-2"><Label>Email</Label><Input type="email" required value={manualForm.guest_email} onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} /></div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2"><Label>Check-in</Label><Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({...manualForm, check_in: e.target.value})} /></div>
+                            <div className="grid gap-2"><Label>Check-out</Label><Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({...manualForm, check_out: e.target.value})} /></div>
+                        </div>
+                        <div className="grid gap-2"><Label>Prezzo Totale (€)</Label><Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({...manualForm, total_price: e.target.value})} /></div>
+                        <DialogFooter><Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">{processing ? "Salvataggio..." : "Salva e Aggiorna"}</Button></DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
