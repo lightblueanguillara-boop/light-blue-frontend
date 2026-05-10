@@ -1,186 +1,345 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
-import { toast } from "sonner";
-import Header from "../components/site/Header";
-import Footer from "../components/site/Footer";
-import { Input } from "../components/ui/input";
-import { Checkbox } from "../components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
-import { Label } from "../components/ui/label";
-import { api } from "../lib/api";
-import { fmtItDate, toIsoDate } from "../lib/date";
+import { Calendar as CalendarIcon, List, Plus, Pencil, Search, X, Info, CreditCard, Hash, Users, Phone, Mail, FileText } from "lucide-react";
+import { api } from "../../lib/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Badge } from "../../components/ui/badge";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Button } from "../../components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { fmtItDate } from "../../lib/date";
 
-const fmt = toIsoDate;
+const statusColors = {
+    pending: "bg-amber-100 text-amber-700",
+    confirmed: "bg-emerald-100 text-emerald-700",
+    cancelled: "bg-rose-100 text-rose-700",
+    external: "bg-slate-100 text-slate-700",
+};
 
-export default function Booking() {
-    const [range, setRange] = useState();
-    const [blocked, setBlocked] = useState([]);
-    const [quote, setQuote] = useState(null);
-    const [paymentChoice, setPaymentChoice] = useState("deposit");
-    const [form, setForm] = useState({
-        guest_name: "",
-        guest_email: "",
-        guest_phone: "",
-        adults: 2,
-        children: 0,
-        notes: "",
-        consent_newsletter: false,
+export default function AdminBookings() {
+    const [items, setItems] = useState([]);
+    const [search, setSearch] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [filterPayment, setFilterPayment] = useState("all");
+    const [filterSource, setFilterSource] = useState("all");
+    
+    const [manualOpen, setManualOpen] = useState(false);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [processing, setProcessing] = useState(false);
+
+    const [manualForm, setManualForm] = useState({
+        guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale"
     });
-    const [submitting, setSubmitting] = useState(false);
 
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+    const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
+    useEffect(() => { load(); }, []);
 
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 1024);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
+    const filtered = useMemo(() => {
+        return items.filter((b) => {
+            const searchTerm = search.toLowerCase();
+            const matchesSearch = 
+                (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
+                (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
+                (b.guest_phone?.toLowerCase() || "").includes(searchTerm) ||
+                (b.id?.toString() || "").includes(searchTerm);
+            
+            let matchesStatus = filterStatus === "all" || (filterStatus === "external" ? (b.status === "external" || b.source === "airbnb" || b.source === "booking") : b.status === filterStatus);
+            const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
+            let matchesSource = filterSource === "all" || (filterSource === "external" ? (b.source === "airbnb" || b.source === "booking" || b.source === "external") : b.source === filterSource);
 
-    useEffect(() => {
-        const today = new Date();
-        const start = fmt(today);
-        const end = fmt(new Date(today.getFullYear(), today.getMonth() + 12, 0));
-        api.get(`/availability?start=${start}&end=${end}`).then((r) => {
-            setBlocked(r.data.blocked_dates.map((d) => new Date(d)));
+            return matchesSearch && matchesStatus && matchesPayment && matchesSource;
         });
-    }, []);
+    }, [items, search, filterStatus, filterPayment, filterSource]);
 
-    useEffect(() => {
-        if (range?.from && range?.to && range.to > range.from) {
-            api.post(`/quote?check_in=${fmt(range.from)}&check_out=${fmt(range.to)}`).then((r) => setQuote(r.data)).catch(() => setQuote(null));
-        } else {
-            setQuote(null);
-        }
-    }, [range]);
+    const bookedDates = useMemo(() => {
+        const dates = [];
+        items.filter(b => b.status !== "cancelled").forEach(b => {
+            let current = new Date(b.check_in);
+            const end = new Date(b.check_out);
+            while (current < end) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+        });
+        return dates;
+    }, [items]);
 
-    const canSubmit = quote?.available && form.guest_name && form.guest_email && range?.from && range?.to;
-
-    const submit = async (e) => {
-        e.preventDefault();
-        if (!canSubmit) return;
-        setSubmitting(true);
+    const update = async (id, patch) => {
         try {
-            const r = await api.post("/bookings/checkout", {
-                ...form,
-                check_in: fmt(range.from),
-                check_out: fmt(range.to),
-                payment_choice: paymentChoice,
-                origin_url: window.location.origin,
-            });
-            window.location.href = r.data.url;
-        } catch (err) {
-            toast.error(err?.response?.data?.detail || "Errore nel checkout");
-            setSubmitting(false);
-        }
+            await api.patch(`/admin/bookings/${id}`, patch);
+            toast.success("Aggiornato");
+            load();
+        } catch { toast.error("Errore durante l'aggiornamento"); }
     };
 
-    const minDate = useMemo(() => new Date(), []);
-    const amount = quote ? (paymentChoice === "full" ? quote.total : quote.deposit_amount) : 0;
+    const del = async (id) => {
+        if (!window.confirm("Eliminare definitivamente questa prenotazione?")) return;
+        try { await api.delete(`/admin/bookings/${id}`); toast.success("Eliminata"); load(); } catch { toast.error("Errore durante l'eliminazione"); }
+    };
+
+    const handleManualSubmit = async (e) => {
+        e.preventDefault();
+        setProcessing(true);
+        try {
+            const priceAsNumber = parseFloat(manualForm.total_price) || 0;
+            const payload = { ...manualForm, total_price: priceAsNumber };
+            
+            if (manualForm.id) {
+                await api.patch(`/admin/bookings/${manualForm.id}`, payload);
+                toast.success("Modificata con successo");
+            } else {
+                await api.post("/admin/bookings/manual", { 
+                    ...payload, 
+                    id: `man-${Date.now()}`, 
+                    status: "confirmed", 
+                    payment_status: "fully_paid", 
+                    source: "manual", 
+                    created_at: new Date().toISOString() 
+                });
+                toast.success("Registrata con successo");
+            }
+            setManualOpen(false);
+            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+            load();
+        } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
+    };
+
+    const openEdit = (b) => {
+        setManualForm({ 
+            id: b.id, 
+            guest_name: b.guest_name || "", 
+            guest_email: b.guest_email || "", 
+            guest_phone: b.guest_phone || "",
+            check_in: b.check_in || "", 
+            check_out: b.check_out || "", 
+            total_price: String(b.total_price || 0), 
+            notes: b.notes || "" 
+        });
+        setManualOpen(true);
+    };
+
+    const openDetail = (b) => {
+        setSelectedBooking(b);
+        setDetailOpen(true);
+    };
 
     return (
-        <div className="bg-lake-cream min-h-screen w-full overflow-x-hidden">
-            <Header />
-            
-            <section className="mx-auto max-w-7xl px-6 sm:px-10 pt-8 md:pt-12 pb-6 text-center md:text-left">
-                <p className="overline text-xs md:text-sm">Prenota il tuo soggiorno</p>
-                <h1 className="font-display text-3xl md:text-5xl text-lake-ink mt-3 tracking-tight">
-                    Seleziona le date.
-                </h1>
-            </section>
-
-            <section className="mx-auto max-w-7xl px-4 sm:px-10 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-                
-                {/* CALENDARIO: rimosso items-center per evitare lo spazio vuoto in alto su PC */}
-                <div className="lg:col-span-7 bg-white border border-lake-border rounded-sm p-2 sm:p-8 flex justify-center overflow-hidden" data-testid="booking-calendar">
-                    <DayPicker
-                        mode="range"
-                        locale={it}
-                        selected={range}
-                        onSelect={setRange}
-                        disabled={[{ before: minDate }, ...blocked]}
-                        numberOfMonths={isMobile ? 1 : 2}
-                        showOutsideDays={false}
-                        weekStartsOn={1}
-                        className="mx-auto"
-                        styles={{
-                            caption: { color: "#2A333C", textTransform: "capitalize" },
-                            day_selected: { background: "#7A93AC", color: "#fff" },
-                            day_range_middle: { background: "#D3C7B640", color: "#2A333C" },
-                        }}
-                    />
+        <div className="p-10" data-testid="admin-bookings-page">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
+                <div>
+                    <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
+                    <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
                 </div>
+                <Button onClick={() => {
+                    setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+                    setManualOpen(true);
+                }} className="bg-lake-blue hover:bg-lake-blue/90">
+                    <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
+                </Button>
+            </div>
 
-                {/* FORM */}
-                <form onSubmit={submit} className="lg:col-span-5 bg-white border border-lake-border rounded-sm p-6 sm:p-8 space-y-5" data-testid="booking-form">
-                    <div>
-                        <p className="overline text-[10px] md:text-xs">Ospite principale</p>
-                        <div className="grid gap-3 mt-4">
-                            <Input data-testid="guest-name" required placeholder="Nome e cognome" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} />
-                            <Input data-testid="guest-email" required type="email" placeholder="Email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} />
-                            <Input data-testid="guest-phone" placeholder="Telefono (opzionale)" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} />
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <Input data-testid="guest-adults" type="number" min={1} max={8} placeholder="Adulti" value={form.adults} onChange={(e) => setForm({ ...form, adults: parseInt(e.target.value || 0) })} />
-                                <Input data-testid="guest-children" type="number" min={0} max={6} placeholder="Bambini" value={form.children} onChange={(e) => setForm({ ...form, children: parseInt(e.target.value || 0) })} />
+            {/* Dialog Form Manuale */}
+            <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{manualForm.id ? "Modifica" : "Nuova"} Prenotazione Manuale</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleManualSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Nome Ospite</Label>
+                            <Input required value={manualForm.guest_name} onChange={(e) => setManualForm({...manualForm, guest_name: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Email</Label>
+                                <Input type="email" value={manualForm.guest_email} onChange={(e) => setManualForm({...manualForm, guest_email: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Telefono</Label>
+                                <Input type="tel" value={manualForm.guest_phone} onChange={(e) => setManualForm({...manualForm, guest_phone: e.target.value})} placeholder="+39..." />
                             </div>
                         </div>
-                    </div>
-
-                    <div className="border-t border-lake-border pt-5">
-                        <p className="overline text-[10px] md:text-xs">Modalità di pagamento</p>
-                        <RadioGroup value={paymentChoice} onValueChange={setPaymentChoice} className="mt-4 grid gap-3" data-testid="payment-choice">
-                            <label className="flex items-start gap-3 p-4 border border-lake-border rounded-sm cursor-pointer hover:bg-lake-cream">
-                                <RadioGroupItem value="deposit" id="r-dep" data-testid="radio-deposit" />
-                                <div>
-                                    <Label htmlFor="r-dep" className="font-medium text-lake-ink">Acconto ({quote ? `€${quote.deposit_amount}` : `${quote?.deposit_percent ?? 30}%`})</Label>
-                                    <p className="text-xs text-lake-ink/60 mt-1">Blocca la prenotazione. Saldo al check-in.</p>
-                                </div>
-                            </label>
-                            <label className="flex items-start gap-3 p-4 border border-lake-border rounded-sm cursor-pointer hover:bg-lake-cream">
-                                <RadioGroupItem value="full" id="r-full" data-testid="radio-full" />
-                                <div>
-                                    <Label htmlFor="r-full" className="font-medium text-lake-ink">Pagamento totale {quote ? `(€${quote.total})` : ""}</Label>
-                                    <p className="text-xs text-lake-ink/60 mt-1">Saldo 100% subito.</p>
-                                </div>
-                            </label>
-                        </RadioGroup>
-                    </div>
-
-                    <div className="border-t border-lake-border pt-5 space-y-2">
-                        <p className="overline text-[10px] md:text-xs">Riepilogo</p>
-                        {range?.from && range?.to ? (
-                            <div className="text-sm text-lake-ink" data-testid="booking-summary">
-                                <p>Dal <strong>{fmtItDate(range.from)}</strong> al <strong>{fmtItDate(range.to)}</strong></p>
-                                {quote ? (
-                                    <div className="mt-2 space-y-1">
-                                        <p>Notti: <strong>{quote.nights}</strong></p>
-                                        <p>Totale: <strong>€{quote.total}</strong></p>
-                                        <p>Da pagare ora: <strong className="text-lake-blue">€{amount}</strong></p>
-                                        {!quote.available && <p className="text-red-600 text-xs">Date non disponibili.</p>}
-                                    </div>
-                                ) : null}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Check-in (YYYY-MM-DD)</Label>
+                                <Input required type="date" value={manualForm.check_in} onChange={(e) => setManualForm({...manualForm, check_in: e.target.value})} />
                             </div>
-                        ) : (
-                            <p className="text-sm text-lake-ink/60">Seleziona le date.</p>
-                        )}
+                            <div className="space-y-2">
+                                <Label>Check-out (YYYY-MM-DD)</Label>
+                                <Input required type="date" value={manualForm.check_out} onChange={(e) => setManualForm({...manualForm, check_out: e.target.value})} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Prezzo Totale (€)</Label>
+                            <Input required type="number" step="0.01" value={manualForm.total_price} onChange={(e) => setManualForm({...manualForm, total_price: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Note</Label>
+                            <Input value={manualForm.notes} onChange={(e) => setManualForm({...manualForm, notes: e.target.value})} />
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit" disabled={processing} className="w-full bg-lake-blue">
+                                {processing ? "Salvataggio..." : "Salva Prenotazione"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Filtri */}
+            <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
+                <div className="relative flex-1 min-w-[250px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
+                    <Input placeholder="Cerca per nome, email, telefono..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Stato" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti gli stati</SelectItem>
+                            <SelectItem value="pending">In attesa</SelectItem>
+                            <SelectItem value="confirmed">Confermate</SelectItem>
+                            <SelectItem value="cancelled">Cancellate</SelectItem>
+                            <SelectItem value="external">Esterne (Airbnb/Booking)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={filterPayment} onValueChange={setFilterPayment}>
+                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Pagamento" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti i pagamenti</SelectItem>
+                            <SelectItem value="unpaid">Non pagato</SelectItem>
+                            <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                            <SelectItem value="fully_paid">Saldato</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            <Tabs defaultValue="list" className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
+                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="list">
+                    <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
+                                    <TableHead>Ospite</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Importo</TableHead>
+                                    <TableHead>Stato Prenotazione</TableHead>
+                                    <TableHead>Stato Pagamento</TableHead>
+                                    <TableHead>Fonte</TableHead>
+                                    <TableHead className="text-right">Azioni</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.map((b) => (
+                                    <TableRow key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <TableCell>
+                                            <button onClick={() => openDetail(b)} className="text-left group flex flex-col">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="font-bold text-lake-ink group-hover:text-lake-blue transition-colors underline decoration-dotted underline-offset-4 tracking-tight">
+                                                        {b.guest_name}
+                                                    </span>
+                                                    <Info className="w-3 h-3 text-lake-ink/20 group-hover:text-lake-blue" />
+                                                </div>
+                                                <span className="text-[10px] text-lake-ink/50 uppercase">{b.guest_email}</span>
+                                                {b.guest_phone && <span className="text-[9px] text-lake-blue font-semibold italic">{b.guest_phone}</span>}
+                                            </button>
+                                        </TableCell>
+                                        <TableCell className="text-sm font-medium whitespace-nowrap italic text-slate-600 tracking-tight">
+                                            {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
+                                        </TableCell>
+                                        <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
+                                        <TableCell>
+                                            <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
+                                                <SelectTrigger className="w-32 h-8 text-[11px] font-semibold"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="pending">In attesa</SelectItem>
+                                                    <SelectItem value="confirmed">Confermata</SelectItem>
+                                                    <SelectItem value="cancelled">Cancellate</SelectItem>
+                                                    <SelectItem value="external">Esterna</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
+                                                <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
+                                                    <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold w-full justify-center`}>
+                                                        {b.payment_status}
+                                                    </Badge>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unpaid">Non pagato</SelectItem>
+                                                    <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                                                    <SelectItem value="fully_paid">Saldato</SelectItem>
+                                                    <SelectItem value="refunded">Rimborsato</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell className="text-[10px] uppercase font-black text-lake-ink/40 tracking-widest">{b.source}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex flex-col items-end gap-1 text-[11px]">
+                                                <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
+                                                    <Pencil className="w-3 h-3"/> MODIFICA
+                                                </button>
+                                                <button onClick={() => del(b.id)} className="text-red-500 hover:underline font-bold uppercase tracking-tighter">ELIMINA</button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
+                </TabsContent>
 
-                    <label className="flex items-start gap-3 text-[11px] text-lake-ink/70">
-                        <Checkbox data-testid="book-consent" checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
-                        <span>Acconsento a ricevere comunicazioni promozionali (GDPR).</span>
-                    </label>
+                <TabsContent value="calendar" className="bg-white border border-lake-border rounded-sm p-10 flex justify-center">
+                    <DayPicker mode="multiple" locale={it} modifiers={{ booked: bookedDates }} modifiersStyles={{ booked: { backgroundColor: "#ef4444", color: "white", borderRadius: 0 } }} numberOfMonths={3} className="admin-calendar" />
+                </TabsContent>
+            </Tabs>
 
-                    <button type="submit" disabled={!canSubmit || submitting} data-testid="book-submit" className="w-full py-4 rounded-sm bg-lake-blue text-white text-sm hover:bg-[#678099] transition-colors disabled:opacity-50 font-medium">
-                        {submitting ? "Attendi..." : `Procedi al pagamento${amount ? ` · €${amount}` : ""}`}
-                    </button>
-                    <p className="text-[10px] text-lake-ink/50 text-center leading-tight">
-                        Pagamento sicuro con Stripe · Carta, PayPal, Klarna, Satispay.
-                    </p>
-                </form>
-            </section>
-            <Footer />
+            {/* Dettaglio Prenotazione */}
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-display text-lake-ink">Scheda Dettagliata</DialogTitle>
+                        <DialogDescription>Informazioni complete sulla prenotazione e dati tecnici.</DialogDescription>
+                    </DialogHeader>
+
+                    {selectedBooking && (
+                        <div className="space-y-6 py-4">
+                            <div className="grid grid-cols-2 gap-4 border-b pb-4">
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Users className="w-3 h-3"/> Ospite</Label>
+                                    <p className="font-bold text-lg text-lake-ink leading-tight">{selectedBooking.guest_name}</p>
+                                    <div className="flex flex-col gap-0.5 mt-1">
+                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3"/> {selectedBooking.guest_email}</span>
+                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3"/> {selectedBooking.guest_phone || "Nessun telefono"}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Stato / Fonte</Label>
+                                    <div className="flex flex-col items-end gap-1 mt-1">
+                                        <Badge className={`${statusColors[selectedBooking.status]} border-none uppercase text-[9px]`}>{selectedBooking.status}</Badge>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{selectedBooking.source}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* ... resto del dettaglio ... */}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
