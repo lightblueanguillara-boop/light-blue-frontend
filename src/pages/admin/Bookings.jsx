@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
@@ -14,14 +14,14 @@ import { Label } from "../../components/ui/label";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { fmtItDate } from "../../lib/date";
-
+ 
 const statusColors = {
     pending: "bg-amber-100 text-amber-700",
     confirmed: "bg-emerald-100 text-emerald-700",
     cancelled: "bg-rose-100 text-rose-700",
     external: "bg-slate-100 text-slate-700",
 };
-
+ 
 export default function AdminBookings() {
     const [items, setItems] = useState([]);
     const [search, setSearch] = useState("");
@@ -33,14 +33,14 @@ export default function AdminBookings() {
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [processing, setProcessing] = useState(false);
-
+ 
     const [manualForm, setManualForm] = useState({
-        guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale"
+        guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale"
     });
-
+ 
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
     useEffect(() => { load(); }, []);
-
+ 
     const filtered = useMemo(() => {
         return items.filter((b) => {
             const searchTerm = search.toLowerCase();
@@ -52,11 +52,11 @@ export default function AdminBookings() {
             let matchesStatus = filterStatus === "all" || (filterStatus === "external" ? (b.status === "external" || b.source === "airbnb" || b.source === "booking") : b.status === filterStatus);
             const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
             let matchesSource = filterSource === "all" || (filterSource === "external" ? (b.source === "airbnb" || b.source === "booking" || b.source === "external") : b.source === filterSource);
-
+ 
             return matchesSearch && matchesStatus && matchesPayment && matchesSource;
         });
     }, [items, search, filterStatus, filterPayment, filterSource]);
-
+ 
     const bookedDates = useMemo(() => {
         const dates = [];
         items.filter(b => b.status !== "cancelled").forEach(b => {
@@ -69,7 +69,7 @@ export default function AdminBookings() {
         });
         return dates;
     }, [items]);
-
+ 
     const update = async (id, patch) => {
         try {
             await api.patch(`/admin/bookings/${id}`, patch);
@@ -77,12 +77,12 @@ export default function AdminBookings() {
             load();
         } catch { toast.error("Errore durante l'aggiornamento"); }
     };
-
+ 
     const del = async (id) => {
         if (!window.confirm("Eliminare definitivamente questa prenotazione?")) return;
         try { await api.delete(`/admin/bookings/${id}`); toast.success("Eliminata"); load(); } catch { toast.error("Errore durante l'eliminazione"); }
     };
-
+ 
     const handleManualSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
@@ -107,21 +107,21 @@ export default function AdminBookings() {
                 toast.success("Registrata con successo");
             }
             setManualOpen(false);
-            setManualForm({ guest_name: "", guest_email: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
             load();
         } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
     };
-
+ 
     const openEdit = (b) => {
-        setManualForm({ id: b.id, guest_name: b.guest_name || "", guest_email: b.guest_email || "", check_in: b.check_in || "", check_out: b.check_out || "", total_price: String(b.total_price || 0), notes: b.notes || "" });
+        setManualForm({ id: b.id, guest_name: b.guest_name || "", guest_email: b.guest_email || "", guest_phone: b.guest_phone || "", check_in: b.check_in || "", check_out: b.check_out || "", total_price: String(b.total_price || 0), notes: b.notes || "" });
         setManualOpen(true);
     };
-
+ 
     const openDetail = (b) => {
         setSelectedBooking(b);
         setDetailOpen(true);
     };
-
+ 
     return (
         <div className="p-10" data-testid="admin-bookings-page">
             <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
@@ -133,7 +133,7 @@ export default function AdminBookings() {
                     <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
                 </Button>
             </div>
-
+ 
             <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
                 <div className="relative flex-1 min-w-[250px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
@@ -170,13 +170,13 @@ export default function AdminBookings() {
                     </Select>
                 </div>
             </div>
-
+ 
             <Tabs defaultValue="list" className="w-full">
                 <TabsList className="mb-4">
                     <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
                     <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
                 </TabsList>
-
+ 
                 <TabsContent value="list">
                     <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
                         <Table>
@@ -221,7 +221,7 @@ export default function AdminBookings() {
                                                 </SelectContent>
                                             </Select>
                                         </TableCell>
-
+ 
                                         <TableCell>
                                             <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
                                                 <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
@@ -237,7 +237,7 @@ export default function AdminBookings() {
                                                 </SelectContent>
                                             </Select>
                                         </TableCell>
-
+ 
                                         <TableCell className="text-[10px] uppercase font-black text-lake-ink/40 tracking-widest">{b.source}</TableCell>
                                         
                                         <TableCell className="text-right">
@@ -254,19 +254,19 @@ export default function AdminBookings() {
                         </Table>
                     </div>
                 </TabsContent>
-
+ 
                 <TabsContent value="calendar" className="bg-white border border-lake-border rounded-sm p-10 flex justify-center">
                     <DayPicker mode="multiple" locale={it} modifiers={{ booked: bookedDates }} modifiersStyles={{ booked: { backgroundColor: "#ef4444", color: "white", borderRadius: 0 } }} numberOfMonths={3} className="admin-calendar" />
                 </TabsContent>
             </Tabs>
-
+ 
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
                 <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-display text-lake-ink">Scheda Dettagliata</DialogTitle>
                         <DialogDescription>Informazioni complete sulla prenotazione e dati tecnici.</DialogDescription>
                     </DialogHeader>
-
+ 
                     {selectedBooking && (
                         <div className="space-y-6 py-4">
                             <div className="grid grid-cols-2 gap-4 border-b pb-4">
@@ -284,7 +284,7 @@ export default function AdminBookings() {
                                     <Badge variant="outline" className="mt-2 uppercase text-[9px] font-black tracking-widest">{selectedBooking.source}</Badge>
                                 </div>
                             </div>
-
+ 
                             <div className="grid grid-cols-2 gap-4 border-b pb-4 text-sm">
                                 <div>
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Soggiorno</Label>
@@ -297,14 +297,14 @@ export default function AdminBookings() {
                                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{selectedBooking.payment_status}</p>
                                 </div>
                             </div>
-
+ 
                             {selectedBooking.notes && (
                                 <div className="bg-amber-50 p-3 rounded-sm border border-amber-100 flex gap-2 italic">
                                     <FileText className="w-4 h-4 text-amber-600 shrink-0" />
                                     <div className="text-sm text-amber-900 leading-relaxed">"{selectedBooking.notes}"</div>
                                 </div>
                             )}
-
+ 
                             <div className="bg-slate-50 p-4 rounded-sm border border-slate-100 space-y-3">
                                 <div>
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Hash className="w-3 h-3" /> Numero Prenotazione (ID)</Label>
@@ -322,13 +322,14 @@ export default function AdminBookings() {
                     <DialogFooter><Button onClick={() => setDetailOpen(false)} className="w-full bg-lake-ink hover:bg-lake-ink/90">Chiudi</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
-
+ 
             <Dialog open={manualOpen} onOpenChange={setManualOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
                     <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
                         <div className="grid gap-2"><Label>Nome Ospite</Label><Input required value={manualForm.guest_name} onChange={e => setManualForm({...manualForm, guest_name: e.target.value})} /></div>
                         <div className="grid gap-2"><Label>Email</Label><Input type="email" required value={manualForm.guest_email} onChange={e => setManualForm({...manualForm, guest_email: e.target.value})} /></div>
+                        <div className="grid gap-2"><Label>Telefono</Label><Input type="tel" value={manualForm.guest_phone} onChange={e => setManualForm({...manualForm, guest_phone: e.target.value})} placeholder="+39..." /></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2"><Label>Check-in</Label><Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({...manualForm, check_in: e.target.value})} /></div>
                             <div className="grid gap-2"><Label>Check-out</Label><Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({...manualForm, check_out: e.target.value})} /></div>
