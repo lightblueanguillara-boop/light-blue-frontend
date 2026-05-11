@@ -23,9 +23,9 @@ const services = [
     { icon: Wifi, title: "Wi-Fi", desc: "Connessione veloce in tutto l'appartamento." },
     { icon: Snowflake, title: "Aria condizionata", desc: "Climatizzazione in camera e salotto." },
     { icon: Footprints, title: "Walking distance", desc: "Centro storico, lungolago e spiagge a pochi passi. Senza auto." },
-    { icon: UtensilsCrossed, title: "Ristorante in convenzione", desc: "Tavolo riservato — possibilità di servizio direttamente in casa." },
-    { icon: Ship, title: "Barche elettriche", desc: "Convenzione con noleggio barche elettriche sul Lago di Bracciano." },
-    { icon: Trees, title: "Maneggio", desc: "Convenzione con maneggio locale per escursioni a cavallo." },
+    { icon: UtensilsCrossed, title: "Enogastronomia", desc: "Ottimi ristoranti di pesce, dove gustare i sapori autentici del lago." },
+    { icon: Ship, title: "Escursioni in Barca", desc: "Noleggio imbarcazioni per visite turistiche del lago." },
+    { icon: Trees, title: "Passeggiate a Cavallo", desc: "Maneggi nelle vicinanze che organizzano passeggiate a cavallo." },
     { icon: Waves, title: "Vista lago", desc: "Camera matrimoniale con vista diretta sul Lago di Bracciano." },
     { icon: Car, title: "Accesso discreto", desc: "Check-in riservato nel cuore del centro storico." },
 ];
@@ -36,7 +36,7 @@ export default function Home() {
     const [form, setForm] = useState({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
     const [sending, setSending] = useState(false);
     
-    // Stato per gestire l'apertura della galleria (indice dell'immagine selezionata)
+    // Stato per gestire l'apertura della galleria
     const [index, setIndex] = useState(-1);
 
     useEffect(() => {
@@ -68,7 +68,7 @@ export default function Home() {
         <div className="bg-lake-cream min-h-screen font-sans">
             <Header />
 
-            {/* HERO */}
+            {/* HERO SECTION */}
             <section className="relative h-[88vh] w-full overflow-hidden">
                 <img src={HERO} alt="Lago di Bracciano" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/55" />
@@ -78,8 +78,17 @@ export default function Home() {
                         Una piccola perla sul Lago di Bracciano.
                     </h1>
                     <div className="mt-10 flex flex-wrap gap-4">
-                        <Link to="/book" className="px-7 py-3.5 rounded-sm bg-white text-lake-ink text-sm font-medium hover:bg-lake-sand transition-colors">
-                            Verifica disponibilità
+                        <Link 
+                            to="/book" 
+                            className="px-7 py-3.5 rounded-sm font-medium transition-colors 
+                                       bg-lake-blue text-white 
+                                       sm:bg-white sm:text-lake-ink sm:hover:bg-lake-sand"
+                        >
+                            {/* Testo mobile */}
+                            <span className="inline sm:hidden">Prenota ora</span>
+                            
+                            {/* Testo desktop */}
+                            <span className="hidden sm:inline">Verifica disponibilità</span>
                         </Link>
                     </div>
                 </div>
@@ -103,7 +112,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* GALLERY MASONRY */}
+            {/* GALLERY */}
             <section id="gallery" className="mx-auto max-w-7xl px-6 sm:px-10 py-16">
                 <div className="mb-10">
                     <p className="overline text-lake-blue">Galleria</p>
@@ -139,7 +148,6 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* LIGHTBOX COMPONENT */}
                 <Lightbox
                     index={index}
                     open={index >= 0}
@@ -183,7 +191,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* CONTACT */}
+            {/* CONTACT FORM */}
             <section id="contact" className="mx-auto max-w-4xl px-6 sm:px-10 py-28">
                 <div className="text-center mb-12">
                     <p className="overline text-lake-blue">Contatti</p>
