@@ -5,7 +5,7 @@ import { Input } from "../../components/ui/input";
 import { api } from "../../lib/api";
 
 export default function AdminLogin() {
-    const [email, setEmail] = useState("admin@lakerelaxvilla.it");
+    const [email, setEmail] = useState("lightblueanguillara@gmail.com");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const nav = useNavigate();
