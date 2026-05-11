@@ -23,9 +23,9 @@ const services = [
     { icon: Wifi, title: "Wi-Fi", desc: "Connessione veloce in tutto l'appartamento." },
     { icon: Snowflake, title: "Aria condizionata", desc: "Climatizzazione in camera e salotto." },
     { icon: Footprints, title: "Walking distance", desc: "Centro storico, lungolago e spiagge a pochi passi. Senza auto." },
-    { icon: UtensilsCrossed, title: "Ristorante in convenzione", desc: "Tavolo riservato — possibilità di servizio direttamente in casa." },
-    { icon: Ship, title: "Barche elettriche", desc: "Convenzione con noleggio barche elettriche sul Lago di Bracciano." },
-    { icon: Trees, title: "Maneggio", desc: "Convenzione con maneggio locale per escursioni a cavallo." },
+    { icon: UtensilsCrossed, title: "Esperienze Enogastronomiche", desc: "Selezione di ottimi ristoranti di pesce, dove gustare i sapori autentici del lago." },
+    { icon: Ship, title: "Escursioni in Barca", desc: "Scoprite la bellezza del Lago di Bracciano da una prospettiva diversa: possibilità di noleggio imbarcazioni per visite turistiche." },
+    { icon: Trees, title: "Passeggiate a Cavallo", desc: "Per gli amanti della natura, sono presenti rinomati maneggi nelle vicinanze che organizzano passeggiate a cavallo nel verde." },
     { icon: Waves, title: "Vista lago", desc: "Camera matrimoniale con vista diretta sul Lago di Bracciano." },
     { icon: Car, title: "Accesso discreto", desc: "Check-in riservato nel cuore del centro storico." },
 ];
