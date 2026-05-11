@@ -7,7 +7,7 @@ import { fmtItDateTime } from "../../lib/date";
 
 export default function AdminMarketing() {
     const [subject, setSubject] = useState("");
-    const [html, setHtml] = useState("<h1>Ciao!</h1><p>Un saluto da Lake Relax Villa.</p>");
+    const [html, setHtml] = useState("<h1>Ciao!</h1><p>Un saluto da Liht Blue Anguillara Sabazia.</p>");
     const [sending, setSending] = useState(false);
     const [count, setCount] = useState(0);
     const [logs, setLogs] = useState([]);
