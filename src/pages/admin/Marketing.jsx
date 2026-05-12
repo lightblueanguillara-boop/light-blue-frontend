@@ -1,98 +1,160 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Input } from "../../components/ui/input";
-import { Textarea } from "../../components/ui/textarea";
-import { api } from "../../lib/api";
-import { fmtItDateTime } from "../../lib/date";
-
-export default function AdminMarketing() {
-    const [subject, setSubject] = useState("");
-    const [html, setHtml] = useState("<h1>Ciao!</h1><p>Un saluto da Liht Blue Anguillara Sabazia.</p>");
-    const [sending, setSending] = useState(false);
-    const [count, setCount] = useState(0);
-    const [logs, setLogs] = useState([]);
-
-    useEffect(() => {
-        api.get("/admin/subscribers").then((r) => setCount(r.data.length));
-        api.get("/admin/marketing/logs").then((r) => setLogs(r.data));
-    }, []);
-
-    const send = async () => {
-        if (!subject || !html) { toast.error("Oggetto e contenuto richiesti"); return; }
-        if (!window.confirm(`Inviare a ${count} iscritti?`)) return;
-        setSending(true);
-        try {
-            const r = await api.post("/admin/marketing/send", { subject, html_content: html });
-            toast.success(`Inviato a ${r.data.sent} iscritti (${r.data.failed} falliti)`);
-            api.get("/admin/marketing/logs").then((r) => setLogs(r.data));
-        } catch (e) {
-            toast.error(e?.response?.data?.detail || "Errore invio");
-        } finally { setSending(false); }
-    };
-
-    const deleteLog = async (id, e) => {
-        e.stopPropagation(); // Impedisce di caricare il log mentre lo si elimina
-        if (!window.confirm("Eliminare questo log?")) return;
-        try {
-            await api.delete(`/admin/marketing/logs/${id}`);
-            toast.success("Log eliminato");
-            setLogs(logs.filter(l => l.id !== id));
-        } catch (e) {
-            toast.error("Errore eliminazione");
-        }
-    };
-
-    const loadLog = (log) => {
-        setSubject(log.subject);
-        // Cerchiamo il contenuto HTML nel log. 
-        // Nota: Il backend attuale salva subject e conteggi, ma dobbiamo assicurarci che salvi anche l'html.
-        if (log.html_content) {
-            setHtml(log.html_content);
-            toast.info("Contenuto caricato nell'editor");
-        } else {
-            toast.error("Contenuto HTML non trovato in questo log");
-        }
-    };
-
-    return (
-        <div className="p-10 grid lg:grid-cols-12 gap-8" data-testid="admin-marketing-page">
-            <div className="lg:col-span-8">
-                <p className="overline">Marketing</p>
-                <h1 className="font-display text-4xl text-lake-ink mt-2">Comunicazione agli ospiti</h1>
-                <p className="text-sm text-lake-ink/60 mt-2">Verrà inviato a <strong>{count}</strong> iscritti con consenso GDPR.</p>
-
-                <div className="mt-8 bg-white border border-lake-border rounded-sm p-8 space-y-4">
-                    <Input data-testid="marketing-subject" placeholder="Oggetto email" value={subject} onChange={(e) => setSubject(e.target.value)} />
-                    <Textarea data-testid="marketing-html" rows={12} placeholder="Contenuto HTML" value={html} onChange={(e) => setHtml(e.target.value)} />
-                    <button onClick={send} disabled={sending} data-testid="marketing-send-btn" className="px-6 py-3 rounded-sm bg-lake-blue text-white text-sm disabled:opacity-50">
-                        {sending ? "Invio..." : "Invia campagna"}
-                    </button>
-                    <p className="text-[11px] text-lake-ink/50">Servizio: Resend · Clicca su un invio nello storico per riutilizzarlo.</p>
-                </div>
-            </div>
-            <div className="lg:col-span-4">
-                <p className="overline">Storico invii</p>
-                <div className="mt-4 bg-white border border-lake-border rounded-sm divide-y divide-lake-border">
-                    {logs.length === 0 && <p className="p-5 text-sm text-lake-ink/60">Nessun invio finora.</p>}
-                    {logs.map((l) => (
-                        <div 
-                            key={l.id} 
-                            onClick={() => loadLog(l)}
-                            className="p-5 flex justify-between items-start group hover:bg-lake-blue/5 cursor-pointer transition-colors" 
-                            data-testid={`marketing-log-${l.id}`}
-                        >
-                            <div className="truncate flex-1">
-                                <p className="font-medium text-lake-ink text-sm truncate">{l.subject}</p>
-                                <p className="text-xs text-lake-ink/60 mt-1">{fmtItDateTime(l.created_at)}</p>
-                                <p className="text-xs mt-1">Inviati: {l.sent_count} / {l.total}</p>
-                            </div>
-                            <button onClick={(e) => deleteLog(l.id, e)} className="text-xs text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-2 pt-1">
-                                Elimina
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="width=device-width" name="viewport" />
+    <link rel="preload" as="image" href="https://www.lightblueanguillara.com/favicon.ico" />
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta content="telephone=no,address=no,email=no,date=no,url=no" name="format-detection" />
+  </head>
+  <body style="background-color:#ffffff">
+    <!--$--><!--html--><!--head--><!--body-->
+    <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center">
+      <tbody>
+        <tr>
+          <td style="background-color:#ffffff">
+            <table
+              align="left"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="max-width:600px;align:left;width:100%;color:#000000;background-color:#ffffff;padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;border-radius:0px;border-color:#000000"
+            >
+              <tbody>
+                <tr style="width:100%">
+                  <td>
+                    <table
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0"
+                    >
+                      <tbody>
+                        <tr style="margin:0;padding:0">
+                          <td align="center" data-id="__react-email-column" style="margin:0;padding:60px 20px">
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0;max-width:500px;text-align:center"
+                            >
+                              <tbody>
+                                <tr style="margin:0;padding:0">
+                                  <td
+                                    align="center"
+                                    data-id="__react-email-column"
+                                    style="margin:0;padding:0;padding-bottom:30px"
+                                  >
+                                    <img
+                                      alt="Logo"
+                                      src="https://www.lightblueanguillara.com/favicon.ico"
+                                      style="display:block;outline:none;border:0;text-decoration:none;max-width:100%"
+                                      width="80"
+                                    />
+                                  </td>
+                                </tr>
+                                <tr style="margin:0;padding:0">
+                                  <td
+                                    align="center"
+                                    data-id="__react-email-column"
+                                    style="margin:0;padding:0;padding-bottom:40px"
+                                  >
+                                    <h1
+                                      style="margin:0;padding:0;font-size:26px;font-weight:normal;color:#1a4a5e;letter-spacing:4px;text-transform:uppercase"
+                                    >
+                                      LIGHT BLUE
+                                    </h1>
+                                    <p
+                                      style="margin:8px 0 0 0;padding:0;font-size:14px;font-style:italic;color:#19a7d7;letter-spacing:1px"
+                                    >
+                                      <em>Anguillara Sabazia</em>
+                                    </p>
+                                  </td>
+                                </tr>
+                                <tr style="margin:0;padding:0">
+                                  <td
+                                    align="left"
+                                    data-id="__react-email-column"
+                                    style="margin:0;padding:0;padding-bottom:50px;font-size:17px;line-height:1.8;color:#333333;text-align:left"
+                                  >
+                                    <p style="margin:0;padding:0">
+                                      Gentile ospite, <br /><br />Con l&#x27;arrivo della bella stagione, la nostra
+                                      struttura si prepara ad accogliervi con un&#x27;atmosfera ancora più esclusiva.
+                                      <br /><br />Abbiamo appena inaugurato il nuovo sistema di prenotazione online e
+                                      non vediamo l&#x27;ora di potervi accogliere con affetto. <br /><br />Affrettatevi
+                                      a prenotare direttamente dal nostro sito.
+                                    </p>
+                                  </td>
+                                </tr>
+                                <tr style="margin:0;padding:0">
+                                  <td align="center" data-id="__react-email-column" style="margin:0;padding:0">
+                                    <table
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0"
+                                    >
+                                      <tbody>
+                                        <tr style="margin:0;padding:0">
+                                          <td
+                                            align="center"
+                                            data-id="__react-email-column"
+                                            style="margin:0;padding:0;background-color:#07445a;border-radius:2px"
+                                          >
+                                            <p style="margin:0;padding:0">
+                                              <a
+                                                href="https://www.lightblueanguillara.com"
+                                                rel="noopener noreferrer nofollow"
+                                                style="color:#ffffff;text-decoration-line:none;text-decoration:none;display:inline-block;padding:20px 45px;font-family:&#x27;Helvetica Neue&#x27;, Helvetica, Arial, sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase"
+                                                target="_blank"
+                                                >Vai al sito</a
+                                              >
+                                            </p>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                                <tr style="margin:0;padding:0">
+                                  <td
+                                    align="center"
+                                    data-id="__react-email-column"
+                                    style="margin:0;padding:0;padding-top:80px"
+                                  >
+                                    <p
+                                      style="margin:0;padding:0;font-size:11px;color:#999999;letter-spacing:1px;text-transform:uppercase"
+                                    >
+                                      Light Blue Anguillara Sabazia
+                                    </p>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <p style="margin:0;padding:0"><br /></p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!--/$-->
+  </body>
+</html>
+Broadcast created on May 12, 5:58 PM and sent to contacts on May 12, 6:02 PM
