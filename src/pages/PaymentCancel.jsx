@@ -1,9 +1,22 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { XCircle } from "lucide-react";
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
+import { api } from "../lib/api";
 
 export default function PaymentCancel() {
+    const [searchParams] = useSearchParams();
+    const sessionId = searchParams.get("session_id");
+
+    useEffect(() => {
+        // Libera immediatamente le date non appena l'utente arriva su questa pagina
+        if (!sessionId) return;
+        api.delete(`/bookings/checkout/${sessionId}`).catch(() => {
+            // Silenzioso: anche se fallisce, il cleanup automatico (10 min) risolverà
+        });
+    }, [sessionId]);
+
     return (
         <div className="bg-lake-cream min-h-screen flex flex-col">
             <Header />
