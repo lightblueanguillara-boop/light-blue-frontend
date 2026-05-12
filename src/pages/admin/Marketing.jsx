@@ -30,6 +30,17 @@ export default function AdminMarketing() {
         } finally { setSending(false); }
     };
 
+    const deleteLog = async (id) => {
+        if (!window.confirm("Eliminare questo log?")) return;
+        try {
+            await api.delete(`/admin/marketing/logs/${id}`);
+            toast.success("Log eliminato");
+            setLogs(logs.filter(l => l.id !== id));
+        } catch (e) {
+            toast.error("Errore eliminazione");
+        }
+    };
+
     return (
         <div className="p-10 grid lg:grid-cols-12 gap-8" data-testid="admin-marketing-page">
             <div className="lg:col-span-8">
@@ -51,10 +62,15 @@ export default function AdminMarketing() {
                 <div className="mt-4 bg-white border border-lake-border rounded-sm divide-y divide-lake-border">
                     {logs.length === 0 && <p className="p-5 text-sm text-lake-ink/60">Nessun invio finora.</p>}
                     {logs.map((l) => (
-                        <div key={l.id} className="p-5" data-testid={`marketing-log-${l.id}`}>
-                            <p className="font-medium text-lake-ink text-sm truncate">{l.subject}</p>
-                            <p className="text-xs text-lake-ink/60 mt-1">{fmtItDateTime(l.created_at)}</p>
-                            <p className="text-xs mt-1">Inviati: {l.sent_count} / {l.total}</p>
+                        <div key={l.id} className="p-5 flex justify-between items-start group" data-testid={`marketing-log-${l.id}`}>
+                            <div className="truncate flex-1">
+                                <p className="font-medium text-lake-ink text-sm truncate">{l.subject}</p>
+                                <p className="text-xs text-lake-ink/60 mt-1">{fmtItDateTime(l.created_at)}</p>
+                                <p className="text-xs mt-1">Inviati: {l.sent_count} / {l.total}</p>
+                            </div>
+                            <button onClick={() => deleteLog(l.id)} className="text-xs text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-2 pt-1">
+                                Elimina
+                            </button>
                         </div>
                     ))}
                 </div>
