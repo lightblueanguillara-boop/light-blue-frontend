@@ -30,7 +30,8 @@ export default function AdminMarketing() {
         } finally { setSending(false); }
     };
 
-    const deleteLog = async (id) => {
+    const deleteLog = async (id, e) => {
+        e.stopPropagation(); // Impedisce di caricare il log mentre lo si elimina
         if (!window.confirm("Eliminare questo log?")) return;
         try {
             await api.delete(`/admin/marketing/logs/${id}`);
@@ -38,6 +39,18 @@ export default function AdminMarketing() {
             setLogs(logs.filter(l => l.id !== id));
         } catch (e) {
             toast.error("Errore eliminazione");
+        }
+    };
+
+    const loadLog = (log) => {
+        setSubject(log.subject);
+        // Cerchiamo il contenuto HTML nel log. 
+        // Nota: Il backend attuale salva subject e conteggi, ma dobbiamo assicurarci che salvi anche l'html.
+        if (log.html_content) {
+            setHtml(log.html_content);
+            toast.info("Contenuto caricato nell'editor");
+        } else {
+            toast.error("Contenuto HTML non trovato in questo log");
         }
     };
 
@@ -54,7 +67,7 @@ export default function AdminMarketing() {
                     <button onClick={send} disabled={sending} data-testid="marketing-send-btn" className="px-6 py-3 rounded-sm bg-lake-blue text-white text-sm disabled:opacity-50">
                         {sending ? "Invio..." : "Invia campagna"}
                     </button>
-                    <p className="text-[11px] text-lake-ink/50">Servizio: Resend · Se la chiave API non è configurata, l'invio fallirà silenziosamente.</p>
+                    <p className="text-[11px] text-lake-ink/50">Servizio: Resend · Clicca su un invio nello storico per riutilizzarlo.</p>
                 </div>
             </div>
             <div className="lg:col-span-4">
@@ -62,13 +75,18 @@ export default function AdminMarketing() {
                 <div className="mt-4 bg-white border border-lake-border rounded-sm divide-y divide-lake-border">
                     {logs.length === 0 && <p className="p-5 text-sm text-lake-ink/60">Nessun invio finora.</p>}
                     {logs.map((l) => (
-                        <div key={l.id} className="p-5 flex justify-between items-start group" data-testid={`marketing-log-${l.id}`}>
+                        <div 
+                            key={l.id} 
+                            onClick={() => loadLog(l)}
+                            className="p-5 flex justify-between items-start group hover:bg-lake-blue/5 cursor-pointer transition-colors" 
+                            data-testid={`marketing-log-${l.id}`}
+                        >
                             <div className="truncate flex-1">
                                 <p className="font-medium text-lake-ink text-sm truncate">{l.subject}</p>
                                 <p className="text-xs text-lake-ink/60 mt-1">{fmtItDateTime(l.created_at)}</p>
                                 <p className="text-xs mt-1">Inviati: {l.sent_count} / {l.total}</p>
                             </div>
-                            <button onClick={() => deleteLog(l.id)} className="text-xs text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-2 pt-1">
+                            <button onClick={(e) => deleteLog(l.id, e)} className="text-xs text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-2 pt-1">
                                 Elimina
                             </button>
                         </div>
