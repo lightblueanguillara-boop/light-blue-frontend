@@ -1,160 +1,110 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html dir="ltr" lang="en">
-  <head>
-    <meta content="width=device-width" name="viewport" />
-    <link rel="preload" as="image" href="https://www.lightblueanguillara.com/favicon.ico" />
-    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-    <meta name="x-apple-disable-message-reformatting" />
-    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
-    <meta name="x-apple-disable-message-reformatting" />
-    <meta content="telephone=no,address=no,email=no,date=no,url=no" name="format-detection" />
-  </head>
-  <body style="background-color:#ffffff">
-    <!--$--><!--html--><!--head--><!--body-->
-    <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center">
-      <tbody>
-        <tr>
-          <td style="background-color:#ffffff">
-            <table
-              align="left"
-              width="100%"
-              border="0"
-              cellpadding="0"
-              cellspacing="0"
-              role="presentation"
-              style="max-width:600px;align:left;width:100%;color:#000000;background-color:#ffffff;padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;border-radius:0px;border-color:#000000"
-            >
-              <tbody>
-                <tr style="width:100%">
-                  <td>
-                    <table
-                      width="100%"
-                      border="0"
-                      cellpadding="0"
-                      cellspacing="0"
-                      role="presentation"
-                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0"
-                    >
-                      <tbody>
-                        <tr style="margin:0;padding:0">
-                          <td align="center" data-id="__react-email-column" style="margin:0;padding:60px 20px">
-                            <table
-                              align="center"
-                              width="100%"
-                              border="0"
-                              cellpadding="0"
-                              cellspacing="0"
-                              role="presentation"
-                              style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0;max-width:500px;text-align:center"
-                            >
-                              <tbody>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    align="center"
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:0;padding-bottom:30px"
-                                  >
-                                    <img
-                                      alt="Logo"
-                                      src="https://www.lightblueanguillara.com/favicon.ico"
-                                      style="display:block;outline:none;border:0;text-decoration:none;max-width:100%"
-                                      width="80"
-                                    />
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    align="center"
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:0;padding-bottom:40px"
-                                  >
-                                    <h1
-                                      style="margin:0;padding:0;font-size:26px;font-weight:normal;color:#1a4a5e;letter-spacing:4px;text-transform:uppercase"
-                                    >
-                                      LIGHT BLUE
-                                    </h1>
-                                    <p
-                                      style="margin:8px 0 0 0;padding:0;font-size:14px;font-style:italic;color:#19a7d7;letter-spacing:1px"
-                                    >
-                                      <em>Anguillara Sabazia</em>
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    align="left"
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:0;padding-bottom:50px;font-size:17px;line-height:1.8;color:#333333;text-align:left"
-                                  >
-                                    <p style="margin:0;padding:0">
-                                      Gentile ospite, <br /><br />Con l&#x27;arrivo della bella stagione, la nostra
-                                      struttura si prepara ad accogliervi con un&#x27;atmosfera ancora più esclusiva.
-                                      <br /><br />Abbiamo appena inaugurato il nuovo sistema di prenotazione online e
-                                      non vediamo l&#x27;ora di potervi accogliere con affetto. <br /><br />Affrettatevi
-                                      a prenotare direttamente dal nostro sito.
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td align="center" data-id="__react-email-column" style="margin:0;padding:0">
-                                    <table
-                                      border="0"
-                                      cellpadding="0"
-                                      cellspacing="0"
-                                      role="presentation"
-                                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0"
-                                    >
-                                      <tbody>
-                                        <tr style="margin:0;padding:0">
-                                          <td
-                                            align="center"
-                                            data-id="__react-email-column"
-                                            style="margin:0;padding:0;background-color:#07445a;border-radius:2px"
-                                          >
-                                            <p style="margin:0;padding:0">
-                                              <a
-                                                href="https://www.lightblueanguillara.com"
-                                                rel="noopener noreferrer nofollow"
-                                                style="color:#ffffff;text-decoration-line:none;text-decoration:none;display:inline-block;padding:20px 45px;font-family:&#x27;Helvetica Neue&#x27;, Helvetica, Arial, sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase"
-                                                target="_blank"
-                                                >Vai al sito</a
-                                              >
-                                            </p>
-                                          </td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    align="center"
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:0;padding-top:80px"
-                                  >
-                                    <p
-                                      style="margin:0;padding:0;font-size:11px;color:#999999;letter-spacing:1px;text-transform:uppercase"
-                                    >
-                                      Light Blue Anguillara Sabazia
-                                    </p>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <p style="margin:0;padding:0"><br /></p>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <!--/$-->
-  </body>
-</html>
-Broadcast created on May 12, 5:58 PM and sent to contacts on May 12, 6:02 PM
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { api } from "../../lib/api";
+import { fmtItDateTime } from "../../lib/date";
+
+export default function AdminMarketing() {
+    const [subject, setSubject] = useState("");
+    const [html, setHtml] = useState("<h1>Ciao!</h1><p>Un saluto da Light Blue.</p>");
+    const [sending, setSending] = useState(false);
+    const [count, setCount] = useState(0);
+    const [logs, setLogs] = useState([]);
+    const [previewLog, setPreviewLog] = useState(null);
+
+    useEffect(() => {
+        api.get("/admin/subscribers").then((r) => setCount(r.data.length));
+        api.get("/admin/marketing/logs").then((r) => setLogs(r.data));
+    }, []);
+
+    const send = async () => {
+        if (!subject || !html) { toast.error("Oggetto e contenuto richiesti"); return; }
+        if (!window.confirm(`Inviare a ${count} iscritti?`)) return;
+        setSending(true);
+        try {
+            const r = await api.post("/admin/marketing/send", { subject, html_content: html });
+            toast.success(`Inviato a ${r.data.sent} iscritti`);
+            api.get("/admin/marketing/logs").then((r) => setLogs(r.data));
+        } catch (e) {
+            toast.error("Errore invio");
+        } finally { setSending(false); }
+    };
+
+    const deleteLog = async (id, e) => {
+        e.stopPropagation();
+        if (!window.confirm("Eliminare questo log?")) return;
+        try {
+            await api.delete(`/admin/marketing/logs/${id}`);
+            toast.success("Log eliminato");
+            setLogs(logs.filter(l => l.id !== id));
+        } catch (e) { toast.error("Errore"); }
+    };
+
+    const handleRestore = () => {
+        setSubject(previewLog.subject);
+        setHtml(previewLog.html_content);
+        setPreviewLog(null);
+        toast.info("Contenuto caricato nell'editor");
+    };
+
+    return (
+        <div className="p-10 grid lg:grid-cols-12 gap-8 relative">
+            <div className="lg:col-span-8">
+                <p className="overline">Marketing</p>
+                <h1 className="font-display text-4xl text-lake-ink mt-2">Comunicazione agli ospiti</h1>
+                <div className="mt-8 bg-white border border-lake-border rounded-sm p-8 space-y-4">
+                    <Input placeholder="Oggetto email" value={subject} onChange={(e) => setSubject(e.target.value)} />
+                    <Textarea rows={12} placeholder="Contenuto HTML" value={html} onChange={(e) => setHtml(e.target.value)} />
+                    <button onClick={send} disabled={sending} className="px-6 py-3 rounded-sm bg-lake-blue text-white text-sm">
+                        {sending ? "Invio..." : "Invia campagna"}
+                    </button>
+                </div>
+            </div>
+
+            <div className="lg:col-span-4">
+                <p className="overline">Storico invii</p>
+                <div className="mt-4 bg-white border border-lake-border rounded-sm divide-y divide-lake-border">
+                    {logs.map((l) => (
+                        <div key={l.id} onClick={() => setPreviewLog(l)} className="p-5 flex justify-between items-start group hover:bg-lake-blue/5 cursor-pointer">
+                            <div className="truncate flex-1">
+                                <p className="font-medium text-sm truncate">{l.subject}</p>
+                                <p className="text-[10px] text-lake-ink/60">{fmtItDateTime(l.created_at)}</p>
+                            </div>
+                            <button onClick={(e) => deleteLog(l.id, e)} className="text-xs text-red-500 opacity-0 group-hover:opacity-100 ml-2">Elimina</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {previewLog && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-sm w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h2 className="font-bold text-lake-ink text-sm">Anteprima Invio</h2>
+                                <p className="text-[10px] text-lake-ink/60 uppercase tracking-widest">{previewLog.subject}</p>
+                            </div>
+                            <button onClick={() => setPreviewLog(null)} className="text-xl p-2 hover:bg-gray-200 rounded-full transition-colors leading-none">×</button>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-gray-100 p-4">
+                            {previewLog.html_content ? (
+                                <iframe 
+                                    title="Email Preview"
+                                    srcDoc={previewLog.html_content} 
+                                    className="w-full h-[600px] border-none bg-white shadow-sm"
+                                />
+                            ) : (
+                                <div className="p-10 text-center text-gray-500 italic">Contenuto non disponibile per i log precedenti.</div>
+                            )}
+                        </div>
+                        <div className="p-4 border-t flex justify-end gap-3 bg-white">
+                            <button onClick={() => setPreviewLog(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-lake-border hover:bg-gray-50">Chiudi</button>
+                            <button onClick={handleRestore} className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-lake-blue text-white hover:bg-lake-blue/90">Carica nell'Editor</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
