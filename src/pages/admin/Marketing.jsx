@@ -55,21 +55,45 @@ export default function AdminMarketing() {
 
     const sendCampaign = async () => {
         if (!subject || !html) return toast.error("Oggetto e contenuto richiesti");
-        if (selectedEmails.length === 0) return toast.error("Seleziona almeno un destinatario");
         
-        if (!window.confirm(`Inviare questa email a ${selectedEmails.length} destinatari?`)) return;
+        // FIX: snapshot della selezione PRIMA di qualsiasi operazione asincrona
+        // per evitare che lo state venga modificato durante l'invio.
+        const recipientsSnapshot = [...selectedEmails];
+
+        if (recipientsSnapshot.length === 0) return toast.error("Seleziona almeno un destinatario");
+        
+        // Conferma esplicita con lista destinatari visibile
+        const confirmMsg = recipientsSnapshot.length === 1
+            ? `Inviare questa email a:\n\n${recipientsSnapshot[0]}`
+            : `Inviare questa email a ${recipientsSnapshot.length} destinatari?\n\nPrimi destinatari:\n${recipientsSnapshot.slice(0, 5).join('\n')}${recipientsSnapshot.length > 5 ? `\n... e altri ${recipientsSnapshot.length - 5}` : ''}`;
+
+        if (!window.confirm(confirmMsg)) return;
         
         setSending(true);
         try {
-            const r = await api.post("/admin/marketing/send", { 
-                subject, 
+            // FIX: usiamo lo snapshot frozen, non lo state React che potrebbe
+            // essere stato aggiornato da un re-render durante l'await.
+            const payload = {
+                subject,
                 html_content: html,
-                recipients: selectedEmails // Passiamo la lista scelta al backend
-            });
-            toast.success(`Campagna inviata con successo!`);
+                recipients: recipientsSnapshot,  // lista esatta selezionata
+            };
+
+            // Verifica di sicurezza: log prima dell'invio
+            console.log(`[Marketing] Invio a ${recipientsSnapshot.length} destinatari:`, recipientsSnapshot);
+
+            const r = await api.post("/admin/marketing/send", payload);
+
+            if (r.data.failed > 0) {
+                toast.warning(`Inviato a ${r.data.sent}/${r.data.total} destinatari. ${r.data.failed} falliti.`);
+            } else {
+                toast.success(`Email inviata con successo a ${r.data.sent} destinatar${r.data.sent === 1 ? 'io' : 'i'}!`);
+            }
+            
             loadData(); // Ricarica lo storico
         } catch (e) {
             toast.error("Errore durante l'invio");
+            console.error("[Marketing] Errore invio:", e);
         } finally {
             setSending(false);
         }
@@ -105,15 +129,24 @@ export default function AdminMarketing() {
                 {/* Box Selezione Destinatari */}
                 <div className="bg-white border border-lake-border rounded-sm p-6 shadow-sm">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-lake-ink">1. Seleziona Destinatari ({selectedEmails.length}/{subscribers.length})</h3>
+                        <h3 className="font-bold text-lake-ink">
+                            1. Seleziona Destinatari
+                            {/* FIX: mostra contatore in tempo reale chiaramente */}
+                            <span className={`ml-2 text-sm font-normal px-2 py-0.5 rounded-full ${selectedEmails.length > 0 ? 'bg-lake-blue text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                {selectedEmails.length} / {subscribers.length} selezionati
+                            </span>
+                        </h3>
                         <button 
                             onClick={toggleSelectAll}
                             className="text-xs font-bold uppercase tracking-wider text-lake-blue hover:underline"
                         >
-                            {selectedEmails.length === subscribers.length ? "Deseleziona tutti" : "Seleziona tutti"}
+                            {selectedEmails.length === subscribers.length && subscribers.length > 0 ? "Deseleziona tutti" : "Seleziona tutti"}
                         </button>
                     </div>
                     <div className="max-h-48 overflow-y-auto border rounded-sm p-4 grid grid-cols-1 md:grid-cols-2 gap-2 bg-gray-50">
+                        {subscribers.length === 0 && (
+                            <p className="text-sm text-gray-400 italic col-span-2 text-center py-4">Nessun iscritto trovato</p>
+                        )}
                         {subscribers.map((s) => (
                             <label key={s.id} className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-white rounded-md transition-colors">
                                 <input 
@@ -126,6 +159,17 @@ export default function AdminMarketing() {
                             </label>
                         ))}
                     </div>
+                    {/* FIX: lista visibile dei destinatari selezionati per trasparenza */}
+                    {selectedEmails.length > 0 && selectedEmails.length < subscribers.length && (
+                        <div className="mt-3 p-3 bg-blue-50 rounded-sm border border-blue-100">
+                            <p className="text-xs font-bold text-lake-blue uppercase tracking-wider mb-1">
+                                Invio selettivo — solo a questi {selectedEmails.length}:
+                            </p>
+                            <p className="text-xs text-lake-ink/70 break-all">
+                                {selectedEmails.join(', ')}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Box Editor */}
@@ -154,7 +198,12 @@ export default function AdminMarketing() {
                                 : "bg-lake-blue text-white hover:bg-lake-ink"
                             }`}
                         >
-                            {sending ? "Invio in corso..." : `Invia a ${selectedEmails.length} persone`}
+                            {sending 
+                                ? "Invio in corso..." 
+                                : selectedEmails.length === 0 
+                                    ? "Seleziona destinatari"
+                                    : `Invia a ${selectedEmails.length} person${selectedEmails.length === 1 ? 'a' : 'e'}`
+                            }
                         </button>
                     </div>
                 </div>
@@ -174,6 +223,10 @@ export default function AdminMarketing() {
                             <div className="truncate flex-1">
                                 <p className="font-medium text-lake-ink text-sm truncate">{l.subject}</p>
                                 <p className="text-[10px] text-lake-ink/50 mt-1">{fmtItDateTime(l.created_at)}</p>
+                                {/* FIX: mostra il conteggio reale dei destinatari dallo storico */}
+                                <p className="text-[10px] text-lake-blue/70 mt-0.5">
+                                    Inviato a {l.sent_count}/{l.total} destinatari
+                                </p>
                             </div>
                             <button 
                                 onClick={(e) => deleteLog(l.id, e)} 
@@ -194,6 +247,15 @@ export default function AdminMarketing() {
                             <div>
                                 <h2 className="font-bold text-lake-ink">Dettaglio Invio</h2>
                                 <p className="text-xs text-lake-ink/60 font-mono">{previewLog.subject}</p>
+                                <p className="text-xs text-lake-blue/80 mt-0.5">
+                                    {previewLog.sent_count} inviati · {previewLog.failed_count} falliti · {previewLog.total} totali
+                                </p>
+                                {/* Mostra a chi è stato inviato */}
+                                {previewLog.recipients_list && previewLog.recipients_list.length > 0 && (
+                                    <p className="text-[10px] text-lake-ink/40 mt-1 max-w-xl truncate">
+                                        Destinatari: {previewLog.recipients_list.join(', ')}
+                                    </p>
+                                )}
                             </div>
                             <button onClick={() => setPreviewLog(null)} className="text-2xl font-light p-2">&times;</button>
                         </div>
