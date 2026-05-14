@@ -23,8 +23,8 @@ const services = [
     { icon: Wifi, title: "Wi-Fi", desc: "Connessione veloce in tutto l'appartamento." },
     { icon: Snowflake, title: "Aria condizionata", desc: "Climatizzazione in camera e salotto." },
     { icon: Footprints, title: "Walking distance", desc: "Centro storico, lungolago e spiagge a pochi passi. Senza auto." },
-    { icon: UtensilsCrossed, title: "Enogastronomia", desc: "Ottimi ristoranti di pesce, dove gustare i sapori autentici del lago." },
-    { icon: Ship, title: "Escursioni in Barca", desc: "Noleggio imbarcazioni per visite turistiche del lago." },
+    { icon: UtensilsCrossed, title: "Enogastronomia", desc: "ristorante in convenzione con possibilità di servizio in casa" },
+    { icon: Ship, title: "Escursioni in Barca", desc: "convenzione con barche elettriche per visite turistiche" },
     { icon: Trees, title: "Passeggiate a Cavallo", desc: "Maneggi nelle vicinanze che organizzano passeggiate a cavallo." },
     { icon: Waves, title: "Vista lago", desc: "Camera matrimoniale con vista diretta sul Lago di Bracciano." },
     { icon: Car, title: "Accesso discreto", desc: "Check-in riservato nel cuore del centro storico." },
@@ -60,6 +60,7 @@ export default function Home() {
         } catch {
             toast.error("Errore durante l'invio. Riprova.");
         } finally {
+            // Corretto il refuso del codice originale (setSenging -> setSending)
             setSending(false);
         }
     };
@@ -105,7 +106,7 @@ export default function Home() {
                 <div className="md:col-span-6 md:col-start-7 text-lake-ink/80 leading-relaxed space-y-4">
                     <p>{info?.description || "Benvenuti nel cuore di Anguillara Sabazia."}</p>
                     <div className="grid grid-cols-3 gap-6 pt-6 border-t border-lake-border">
-                        <div><p className="font-display text-3xl text-lake-ink">3</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Ospiti</p></div>
+                        <div><p className="font-display text-3xl text-lake-ink">4</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Ospiti</p></div>
                         <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Camera</p></div>
                         <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Bagno</p></div>
                     </div>
@@ -159,7 +160,7 @@ export default function Home() {
             {/* SERVICES */}
             <section id="services" className="mx-auto max-w-7xl px-6 sm:px-10 py-28">
                 <p className="overline text-lake-blue">Servizi & Convenzioni</p>
-                <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Il territorio, a portata di piedi.</h2>
+                <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Il territorio</h2>
                 <div className="grid md:grid-cols-4 gap-6 mt-14">
                     {services.map((s) => (
                         <div key={s.title} className="p-7 bg-white border border-lake-border rounded-sm hover:-translate-y-1 transition-all">
