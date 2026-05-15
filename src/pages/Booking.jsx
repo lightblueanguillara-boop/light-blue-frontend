@@ -3,12 +3,12 @@ import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom"; // MODIFICA: importato per leggere l'URL
+import { useSearchParams } from "react-router-dom";
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
 import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea"; // Assicurati di avere questo componente
 import { Checkbox } from "../components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Label } from "../components/ui/label";
 import { api } from "../lib/api";
 import { fmtItDate, toIsoDate } from "../lib/date";
@@ -16,12 +16,10 @@ import { fmtItDate, toIsoDate } from "../lib/date";
 const fmt = toIsoDate;
 
 export default function Booking() {
-    // MODIFICA: Leggiamo i parametri 'from' e 'to' dall'URL
     const [searchParams] = useSearchParams();
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
 
-    // MODIFICA: Inizializziamo il range con le date dell'URL se presenti
     const [range, setRange] = useState({
         from: fromParam ? new Date(fromParam) : undefined,
         to: toParam ? new Date(toParam) : undefined
@@ -29,8 +27,8 @@ export default function Booking() {
     
     const [blocked, setBlocked] = useState([]);
     const [quote, setQuote] = useState(null);
-    // FORZATO: paymentChoice impostato su "full" di default
-    const [paymentChoice, setPaymentChoice] = useState("full"); 
+    const [paymentChoice] = useState("full"); // Stato fisso, non modificabile dall'utente
+    
     const [form, setForm] = useState({
         guest_name: "",
         guest_email: "",
@@ -78,7 +76,7 @@ export default function Booking() {
                 ...form,
                 check_in: fmt(range.from),
                 check_out: fmt(range.to),
-                payment_choice: "full", // Forzato l'invio di "full" al backend
+                payment_choice: "full",
                 origin_url: window.location.origin,
             });
             window.location.href = r.data.url;
@@ -89,7 +87,6 @@ export default function Booking() {
     };
 
     const minDate = useMemo(() => new Date(), []);
-    // Sempre il totale visto che paymentChoice è "full"
     const amount = quote ? quote.total : 0;
 
     return (
@@ -124,60 +121,77 @@ export default function Booking() {
                     />
                 </div>
 
-                <form onSubmit={submit} className="lg:col-span-5 bg-white border border-lake-border rounded-sm p-6 sm:p-8 space-y-5" data-testid="booking-form">
-                    <div>
-                        <p className="overline text-[10px] md:text-xs">Ospite principale</p>
-                        <div className="grid gap-3 mt-4">
+                <form onSubmit={submit} className="lg:col-span-5 bg-white border border-lake-border rounded-sm p-6 sm:p-8 space-y-6" data-testid="booking-form">
+                    <div className="space-y-4">
+                        <p className="overline text-[10px] md:text-xs">Dati dell'ospite</p>
+                        <div className="grid gap-3">
                             <Input data-testid="guest-name" required placeholder="Nome e cognome" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} />
                             <Input data-testid="guest-email" required type="email" placeholder="Email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} />
                             <Input data-testid="guest-phone" placeholder="Telefono (opzionale)" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} />
                             
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <Input data-testid="guest-adults" type="number" min={1} max={8} placeholder="Adulti" value={form.adults} onChange={(e) => setForm({ ...form, adults: parseInt(e.target.value || 0) })} />
-                                <Input data-testid="guest-children" type="number" min={0} max={6} placeholder="Bambini" value={form.children} onChange={(e) => setForm({ ...form, children: parseInt(e.target.value || 0) })} />
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-lake-ink/60">Adulti</Label>
+                                    <Input data-testid="guest-adults" type="number" min={1} max={8} value={form.adults} onChange={(e) => setForm({ ...form, adults: parseInt(e.target.value || 0) })} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-lake-ink/60">Bambini</Label>
+                                    <Input data-testid="guest-children" type="number" min={0} max={6} value={form.children} onChange={(e) => setForm({ ...form, children: parseInt(e.target.value || 0) })} />
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* SEZIONE PAGAMENTO MODIFICATA: Rimossa la scelta RadioGroup */}
-                    <div className="border-t border-lake-border pt-5">
-                        <p className="overline text-[10px] md:text-xs">Modalità di pagamento</p>
-                        <div className="mt-4 p-4 bg-lake-cream/30 border border-lake-border rounded-sm">
-                             <Label className="font-medium text-lake-ink">Pagamento totale {quote ? `(€${quote.total})` : ""}</Label>
-                             <p className="text-xs text-lake-ink/60 mt-1">Conferma immediata del soggiorno tramite pagamento sicuro.</p>
+                        <div className="space-y-1.5 pt-2">
+                            <Label className="text-[10px] uppercase font-bold text-lake-ink/60">Note o richieste speciali</Label>
+                            <Textarea 
+                                placeholder="Esempio: orario di arrivo, allergie, lettino per neonati..." 
+                                className="min-h-[80px] resize-none"
+                                value={form.notes} 
+                                onChange={(e) => setForm({ ...form, notes: e.target.value })} 
+                            />
                         </div>
                     </div>
 
-                    <div className="border-t border-lake-border pt-5 space-y-2">
-                        <p className="overline text-[10px] md:text-xs">Riepilogo</p>
+                    <div className="border-t border-lake-border pt-6 space-y-4">
+                        <p className="overline text-[10px] md:text-xs text-lake-ink/60">Riepilogo Soggiorno</p>
                         {range?.from && range?.to ? (
-                            <div className="text-sm text-lake-ink" data-testid="booking-summary">
-                                <p>Dal <strong>{fmtItDate(range.from)}</strong> al <strong>{fmtItDate(range.to)}</strong></p>
+                            <div className="bg-lake-cream/30 p-4 rounded-sm border border-lake-border text-sm text-lake-ink" data-testid="booking-summary">
+                                <p className="font-medium text-base mb-2">{fmtItDate(range.from)} — {fmtItDate(range.to)}</p>
                                 {quote ? (
-                                    <div className="mt-2 space-y-1">
-                                        <p>Notti: <strong>{quote.nights}</strong></p>
-                                        <p>Totale: <strong>€{quote.total}</strong></p>
-                                        <p>Da pagare ora: <strong className="text-lake-blue">€{quote.total}</strong></p>
-                                        {!quote.available && <p className="text-red-600 text-xs">Date non disponibili.</p>}
+                                    <div className="space-y-1 text-lake-ink/80">
+                                        <div className="flex justify-between"><span>Notti:</span><span className="font-bold">{quote.nights}</span></div>
+                                        <div className="flex justify-between border-t border-lake-border/40 pt-2 mt-2">
+                                            <span className="text-lake-ink font-bold">Totale da pagare:</span>
+                                            <span className="text-xl font-display text-lake-blue">€{quote.total}</span>
+                                        </div>
+                                        {!quote.available && <p className="text-red-600 text-xs mt-2 font-bold italic">Date non disponibili.</p>}
                                     </div>
                                 ) : null}
                             </div>
                         ) : (
-                            <p className="text-sm text-lake-ink/60">Seleziona le date.</p>
+                            <p className="text-sm text-lake-ink/60 italic">Seleziona le date per visualizzare il riepilogo.</p>
                         )}
                     </div>
 
-                    <label className="flex items-start gap-3 text-[11px] text-lake-ink/70">
-                        <Checkbox data-testid="book-consent" checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
-                        <span>Acconsento a ricevere comunicazioni promozionali (GDPR).</span>
-                    </label>
+                    <div className="space-y-4">
+                        <label className="flex items-start gap-3 text-[11px] text-lake-ink/70 cursor-pointer">
+                            <Checkbox data-testid="book-consent" checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
+                            <span>Desidero ricevere offerte speciali e aggiornamenti (GDPR).</span>
+                        </label>
 
-                    <button type="submit" disabled={!canSubmit || submitting} data-testid="book-submit" className="w-full py-4 rounded-sm bg-lake-blue text-white text-sm hover:bg-[#678099] transition-colors disabled:opacity-50 font-medium">
-                        {submitting ? "Attendi..." : `Procedi al pagamento${amount ? ` · €${amount}` : ""}`}
-                    </button>
-                    <p className="text-[10px] text-lake-ink/50 text-center leading-tight">
-                        Pagamento sicuro con Stripe · Carta, PayPal, Klarna, Satispay.
-                    </p>
+                        <button type="submit" disabled={!canSubmit || submitting} data-testid="book-submit" className="w-full py-4 rounded-sm bg-lake-blue text-white text-sm hover:bg-lake-ink transition-all disabled:opacity-50 font-bold uppercase tracking-widest shadow-sm">
+                            {submitting ? "Reindirizzamento..." : `Conferma e Paga · €${amount || ""}`}
+                        </button>
+                        
+                        <div className="flex flex-col items-center gap-2">
+                            <p className="text-[10px] text-lake-ink/50 leading-tight text-center uppercase tracking-tighter">
+                                Pagamento sicuro al 100% via Stripe
+                            </p>
+                            <div className="flex gap-2 opacity-40 grayscale scale-75">
+                                {/* Qui puoi inserire icone carte se le hai */}
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </section>
             <Footer />
