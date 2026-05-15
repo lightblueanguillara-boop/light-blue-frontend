@@ -3,6 +3,7 @@ import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom"; // MODIFICA: importato per leggere l'URL
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
 import { Input } from "../components/ui/input";
@@ -15,7 +16,17 @@ import { fmtItDate, toIsoDate } from "../lib/date";
 const fmt = toIsoDate;
 
 export default function Booking() {
-    const [range, setRange] = useState();
+    // MODIFICA: Leggiamo i parametri 'from' e 'to' dall'URL
+    const [searchParams] = useSearchParams();
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+
+    // MODIFICA: Inizializziamo il range con le date dell'URL se presenti
+    const [range, setRange] = useState({
+        from: fromParam ? new Date(fromParam) : undefined,
+        to: toParam ? new Date(toParam) : undefined
+    });
+    
     const [blocked, setBlocked] = useState([]);
     const [quote, setQuote] = useState(null);
     const [paymentChoice, setPaymentChoice] = useState("deposit");
@@ -92,7 +103,6 @@ export default function Booking() {
 
             <section className="mx-auto max-w-7xl px-4 sm:px-10 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
                 
-                {/* CALENDARIO: rimosso items-center per evitare lo spazio vuoto in alto su PC */}
                 <div className="lg:col-span-7 bg-white border border-lake-border rounded-sm p-2 sm:p-8 flex justify-center overflow-hidden" data-testid="booking-calendar">
                     <DayPicker
                         mode="range"
@@ -112,7 +122,6 @@ export default function Booking() {
                     />
                 </div>
 
-                {/* FORM */}
                 <form onSubmit={submit} className="lg:col-span-5 bg-white border border-lake-border rounded-sm p-6 sm:p-8 space-y-5" data-testid="booking-form">
                     <div>
                         <p className="overline text-[10px] md:text-xs">Ospite principale</p>
