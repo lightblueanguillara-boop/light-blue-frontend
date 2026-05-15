@@ -29,7 +29,8 @@ export default function Booking() {
     
     const [blocked, setBlocked] = useState([]);
     const [quote, setQuote] = useState(null);
-    const [paymentChoice, setPaymentChoice] = useState("deposit");
+    // FORZATO: paymentChoice impostato su "full" di default
+    const [paymentChoice, setPaymentChoice] = useState("full"); 
     const [form, setForm] = useState({
         guest_name: "",
         guest_email: "",
@@ -77,7 +78,7 @@ export default function Booking() {
                 ...form,
                 check_in: fmt(range.from),
                 check_out: fmt(range.to),
-                payment_choice: paymentChoice,
+                payment_choice: "full", // Forzato l'invio di "full" al backend
                 origin_url: window.location.origin,
             });
             window.location.href = r.data.url;
@@ -88,7 +89,8 @@ export default function Booking() {
     };
 
     const minDate = useMemo(() => new Date(), []);
-    const amount = quote ? (paymentChoice === "full" ? quote.total : quote.deposit_amount) : 0;
+    // Sempre il totale visto che paymentChoice è "full"
+    const amount = quote ? quote.total : 0;
 
     return (
         <div className="bg-lake-cream min-h-screen w-full overflow-x-hidden">
@@ -137,24 +139,13 @@ export default function Booking() {
                         </div>
                     </div>
 
+                    {/* SEZIONE PAGAMENTO MODIFICATA: Rimossa la scelta RadioGroup */}
                     <div className="border-t border-lake-border pt-5">
                         <p className="overline text-[10px] md:text-xs">Modalità di pagamento</p>
-                        <RadioGroup value={paymentChoice} onValueChange={setPaymentChoice} className="mt-4 grid gap-3" data-testid="payment-choice">
-                            <label className="flex items-start gap-3 p-4 border border-lake-border rounded-sm cursor-pointer hover:bg-lake-cream">
-                                <RadioGroupItem value="deposit" id="r-dep" data-testid="radio-deposit" />
-                                <div>
-                                    <Label htmlFor="r-dep" className="font-medium text-lake-ink">Acconto ({quote ? `€${quote.deposit_amount}` : `${quote?.deposit_percent ?? 30}%`})</Label>
-                                    <p className="text-xs text-lake-ink/60 mt-1">Blocca la prenotazione. Saldo al check-in.</p>
-                                </div>
-                            </label>
-                            <label className="flex items-start gap-3 p-4 border border-lake-border rounded-sm cursor-pointer hover:bg-lake-cream">
-                                <RadioGroupItem value="full" id="r-full" data-testid="radio-full" />
-                                <div>
-                                    <Label htmlFor="r-full" className="font-medium text-lake-ink">Pagamento totale {quote ? `(€${quote.total})` : ""}</Label>
-                                    <p className="text-xs text-lake-ink/60 mt-1">Saldo 100% subito.</p>
-                                </div>
-                            </label>
-                        </RadioGroup>
+                        <div className="mt-4 p-4 bg-lake-cream/30 border border-lake-border rounded-sm">
+                             <Label className="font-medium text-lake-ink">Pagamento totale {quote ? `(€${quote.total})` : ""}</Label>
+                             <p className="text-xs text-lake-ink/60 mt-1">Conferma immediata del soggiorno tramite pagamento sicuro.</p>
+                        </div>
                     </div>
 
                     <div className="border-t border-lake-border pt-5 space-y-2">
@@ -166,7 +157,7 @@ export default function Booking() {
                                     <div className="mt-2 space-y-1">
                                         <p>Notti: <strong>{quote.nights}</strong></p>
                                         <p>Totale: <strong>€{quote.total}</strong></p>
-                                        <p>Da pagare ora: <strong className="text-lake-blue">€{amount}</strong></p>
+                                        <p>Da pagare ora: <strong className="text-lake-blue">€{quote.total}</strong></p>
                                         {!quote.available && <p className="text-red-600 text-xs">Date non disponibili.</p>}
                                     </div>
                                 ) : null}
