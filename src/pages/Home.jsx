@@ -76,7 +76,7 @@ export default function Home() {
                 
                 <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 h-full flex flex-col justify-end pb-20 text-white">
                     {/* MODIFICA: text-white e drop-shadow-lg per massima leggibilità su foto chiara */}
-                    <p className="overline text-white font-semibold tracking-[0.25em] drop-shadow-lg">
+                    <p className="overline !text-white/95 font-semibold tracking-[0.25em] drop-shadow-lg">
                         Appartamento vista lago · Anguillara Sabazia
                     </p>
                     <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4 text-white drop-shadow-md">
