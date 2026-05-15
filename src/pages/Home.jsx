@@ -56,7 +56,7 @@ export default function Home() {
         try {
             await api.post("/contact", form);
             toast.success("Messaggio inviato. Ti risponderemo al più presto.");
-            setForm({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
+            setForm({ name: "", email: "", phone: "", message: "...form.message", consent_newsletter: false });
         } catch {
             toast.error("Errore durante l'invio. Riprova.");
         } finally {
@@ -171,7 +171,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* MAP */}
+            {/* MAP & CONTACTS BLOCK (La sezione con l'indirizzo e i recapiti) */}
             <section id="map" className="mx-auto max-w-7xl px-6 sm:px-10 py-20 grid md:grid-cols-2 gap-12 items-center">
                 <div>
                     <p className="overline text-lake-blue">Dove siamo</p>
@@ -179,6 +179,7 @@ export default function Home() {
                     <div className="mt-6 space-y-3 text-sm text-lake-ink/80">
                         <p><span className="font-semibold uppercase mr-2 text-lake-blue">Indirizzo:</span> {info?.address}</p>
                         <p><span className="font-semibold uppercase mr-2 text-lake-blue">Tel:</span> {info?.phone}</p>
+                        {/* EMAIL AGGIUNTA QUI SOTTO AL TELEFONO */}
                         <p><span className="font-semibold uppercase mr-2 text-lake-blue">Email:</span> {info?.email}</p>
                     </div>
                 </div>
@@ -191,11 +192,16 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* CONTACT FORM */}
+            {/* CONTACT FORM SECTION (La sezione blu in fondo che vedi nello screenshot) */}
             <section id="contact" className="mx-auto max-w-4xl px-6 sm:px-10 py-28">
                 <div className="text-center mb-12">
                     <p className="overline text-lake-blue">Contatti</p>
                     <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Scrivici.</h2>
+                    {/* AGGIUNTA EMAIL E TELEFONO SOTTO IL TITOLO "SCRIVICI" PER ESSERE VISIBILI NEL BLOCCO BLU */}
+                    <div className="mt-4 text-lake-ink/70 text-sm space-y-1">
+                        <p>{info?.phone}</p>
+                        <p className="font-medium text-lake-blue">{info?.email}</p>
+                    </div>
                 </div>
                 <form onSubmit={submit} className="grid md:grid-cols-2 gap-5 bg-white p-8 rounded-sm border border-lake-border shadow-sm">
                     <Input placeholder="Nome e cognome" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
