@@ -77,7 +77,7 @@ export default function AdminSettings() {
                         <SelectTrigger data-testid="s-cancel-policy"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="flexible">Flessibile (24h)</SelectItem>
-                            <SelectItem value="moderate">Moderata (5 giorni)</SelectItem>
+                            <SelectItem value="moderate">Moderata (7 giorni)</SelectItem>
                             <SelectItem value="strict">Rigorosa (14 giorni)</SelectItem>
                         </SelectContent>
                     </Select>
