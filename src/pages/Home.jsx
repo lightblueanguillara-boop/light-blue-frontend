@@ -60,7 +60,6 @@ export default function Home() {
         } catch {
             toast.error("Errore durante l'invio. Riprova.");
         } finally {
-            // Corretto il refuso del codice originale (setSenging -> setSending)
             setSending(false);
         }
     };
@@ -74,7 +73,10 @@ export default function Home() {
                 <img src={HERO} alt="Lago di Bracciano" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/55" />
                 <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 h-full flex flex-col justify-end pb-20 text-white">
-                    <p className="overline text-white/90 font-medium tracking-[0.2em]">Appartamento vista lago · Anguillara Sabazia</p>
+                    {/* MODIFICA: Colore cambiato in bianco con drop-shadow per massima leggibilità su foto */}
+                    <p className="overline text-white font-medium tracking-[0.2em] drop-shadow-md">
+                        Appartamento vista lago · Anguillara Sabazia
+                    </p>
                     <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4 text-white">
                         Una perla sul Lago di Bracciano.
                     </h1>
@@ -85,10 +87,7 @@ export default function Home() {
                                        bg-lake-blue text-white 
                                        sm:bg-white sm:text-lake-ink sm:hover:bg-lake-sand"
                         >
-                            {/* Testo mobile */}
                             <span className="inline sm:hidden">Prenota ora</span>
-                            
-                            {/* Testo desktop */}
                             <span className="hidden sm:inline">Verifica disponibilità</span>
                         </Link>
                     </div>
