@@ -23,8 +23,8 @@ const services = [
     { icon: Wifi, title: "Wi-Fi", desc: "Connessione veloce in tutto l'appartamento." },
     { icon: Snowflake, title: "Aria condizionata", desc: "Climatizzazione in camera e salotto." },
     { icon: Footprints, title: "Walking distance", desc: "Centro storico, lungolago e spiagge a pochi passi. Senza auto." },
-    { icon: UtensilsCrossed, title: "Enogastronomia", desc: "Ottimi ristoranti di pesce, dove gustare i sapori autentici del lago." },
-    { icon: Ship, title: "Escursioni in Barca", desc: "Noleggio imbarcazioni per visite turistiche del lago." },
+    { icon: UtensilsCrossed, title: "Enogastronomia", desc: "Ristorante in convenzione con possibilità di servizio in casa" },
+    { icon: Ship, title: "Escursioni in Barca", desc: "Convenzione con barche elettriche per visite turistiche" },
     { icon: Trees, title: "Passeggiate a Cavallo", desc: "Maneggi nelle vicinanze che organizzano passeggiate a cavallo." },
     { icon: Waves, title: "Vista lago", desc: "Camera matrimoniale con vista diretta sul Lago di Bracciano." },
     { icon: Car, title: "Accesso discreto", desc: "Check-in riservato nel cuore del centro storico." },
@@ -60,6 +60,7 @@ export default function Home() {
         } catch {
             toast.error("Errore durante l'invio. Riprova.");
         } finally {
+            // Corretto il refuso del codice originale (setSenging -> setSending)
             setSending(false);
         }
     };
@@ -75,7 +76,7 @@ export default function Home() {
                 <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 h-full flex flex-col justify-end pb-20 text-white">
                     <p className="overline text-white/90 font-medium tracking-[0.2em]">Appartamento vista lago · Anguillara Sabazia</p>
                     <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4 text-white">
-                        Una piccola perla sul Lago di Bracciano.
+                        Una perla sul Lago di Bracciano.
                     </h1>
                     <div className="mt-10 flex flex-wrap gap-4">
                         <Link 
@@ -105,7 +106,7 @@ export default function Home() {
                 <div className="md:col-span-6 md:col-start-7 text-lake-ink/80 leading-relaxed space-y-4">
                     <p>{info?.description || "Benvenuti nel cuore di Anguillara Sabazia."}</p>
                     <div className="grid grid-cols-3 gap-6 pt-6 border-t border-lake-border">
-                        <div><p className="font-display text-3xl text-lake-ink">3</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Ospiti</p></div>
+                        <div><p className="font-display text-3xl text-lake-ink">4</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Ospiti</p></div>
                         <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Camera</p></div>
                         <div><p className="font-display text-3xl text-lake-ink">1</p><p className="text-[10px] uppercase tracking-widest text-lake-ink/60 mt-1">Bagno</p></div>
                     </div>
@@ -159,7 +160,7 @@ export default function Home() {
             {/* SERVICES */}
             <section id="services" className="mx-auto max-w-7xl px-6 sm:px-10 py-28">
                 <p className="overline text-lake-blue">Servizi & Convenzioni</p>
-                <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Il territorio, a portata di piedi.</h2>
+                <h2 className="font-display text-4xl lg:text-5xl text-lake-ink mt-3 font-light">Il territorio: posizione strategica per esplorare il lago e le sue bellezze</h2>
                 <div className="grid md:grid-cols-4 gap-6 mt-14">
                     {services.map((s) => (
                         <div key={s.title} className="p-7 bg-white border border-lake-border rounded-sm hover:-translate-y-1 transition-all">
@@ -185,7 +186,7 @@ export default function Home() {
                 <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner">
                     <iframe
                         title="Mappa"
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=12.267536222934725%2C42.09224558875566%2C12.269789278507234%2C42.09357315674993&layer=mapnik&marker=42.092909%2C12.268663"
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=12.26714998483658%2C42.0921838870187%2C12.2703418135643%2C42.093511456304455&layer=mapnik&marker=42.092846679955606%2C12.26874589920044"
                         className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
                     />
                 </div>
