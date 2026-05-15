@@ -71,13 +71,15 @@ export default function Home() {
             {/* HERO SECTION */}
             <section className="relative h-[88vh] w-full overflow-hidden">
                 <img src={HERO} alt="Lago di Bracciano" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/55" />
+                {/* MODIFICA: Gradiente scurito leggermente (da 20 a 40) per dare contrasto alla scritta sopra */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+                
                 <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 h-full flex flex-col justify-end pb-20 text-white">
-                    {/* MODIFICA: Colore cambiato in bianco con drop-shadow per massima leggibilità su foto */}
-                    <p className="overline text-white font-medium tracking-[0.2em] drop-shadow-md">
+                    {/* MODIFICA: text-white e drop-shadow-lg per massima leggibilità su foto chiara */}
+                    <p className="overline text-white font-semibold tracking-[0.25em] drop-shadow-lg">
                         Appartamento vista lago · Anguillara Sabazia
                     </p>
-                    <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4 text-white">
+                    <h1 className="font-display font-light text-5xl sm:text-6xl lg:text-7xl tracking-tighter max-w-3xl mt-4 text-white drop-shadow-md">
                         Una perla sul Lago di Bracciano.
                     </h1>
                     <div className="mt-10 flex flex-wrap gap-4">
@@ -85,7 +87,7 @@ export default function Home() {
                             to="/book" 
                             className="px-7 py-3.5 rounded-sm font-medium transition-colors 
                                        bg-lake-blue text-white 
-                                       sm:bg-white sm:text-lake-ink sm:hover:bg-lake-sand"
+                                       sm:bg-white sm:text-lake-ink sm:hover:bg-lake-sand shadow-lg"
                         >
                             <span className="inline sm:hidden">Prenota ora</span>
                             <span className="hidden sm:inline">Verifica disponibilità</span>
