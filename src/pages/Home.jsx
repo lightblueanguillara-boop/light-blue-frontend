@@ -71,11 +71,9 @@ export default function Home() {
             {/* HERO SECTION */}
             <section className="relative h-[88vh] w-full overflow-hidden">
                 <img src={HERO} alt="Lago di Bracciano" className="absolute inset-0 w-full h-full object-cover" />
-                {/* MODIFICA: Gradiente scurito leggermente (da 20 a 40) per dare contrasto alla scritta sopra */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
                 
                 <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 h-full flex flex-col justify-end pb-20 text-white">
-                    {/* MODIFICA: text-white e drop-shadow-lg per massima leggibilità su foto chiara */}
                     <p className="overline !text-white/95 font-semibold tracking-[0.25em] drop-shadow-lg">
                         Appartamento vista lago · Anguillara Sabazia
                     </p>
