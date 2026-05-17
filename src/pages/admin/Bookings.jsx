@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
-import { Calendar as CalendarIcon, List, Plus, Pencil, Search, X, Info, CreditCard, Hash, Users, Phone, Mail, FileText, Archive, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, List, Plus, Pencil, Search, X, Info, CreditCard, Hash, Users, Phone, Mail, FileText, Archive, Trash2, AlertCircle } from "lucide-react";
 import { api } from "../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
@@ -33,6 +33,7 @@ export default function AdminBookings() {
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [bookingToCancel, setBookingToCancel] = useState(null);
@@ -143,6 +144,7 @@ export default function AdminBookings() {
     const handleManualSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
+        setErrorMessage("");
         try {
             const priceAsNumber = parseFloat(manualForm.total_price) || 0;
             const payload = { 
@@ -168,10 +170,15 @@ export default function AdminBookings() {
             setManualOpen(false);
             setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" });
             load();
-        } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
+        } catch (err) { 
+            const msg = err?.response?.data?.detail || "Errore nel salvataggio";
+            setErrorMessage(msg);
+            toast.error(msg);
+        } finally { setProcessing(false); }
     };
 
     const openEdit = (b) => {
+        setErrorMessage("");
         setManualForm({ 
             id: b.id, 
             guest_name: b.guest_name || "", 
@@ -294,7 +301,7 @@ export default function AdminBookings() {
                     <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
                     <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
                 </div>
-                <Button onClick={() => setManualOpen(true)} className="bg-lake-blue hover:bg-lake-blue/90">
+                <Button onClick={() => { setErrorMessage(""); setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" }); setManualOpen(true); }} className="bg-lake-blue hover:bg-lake-blue/90">
                     <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
                 </Button>
             </div>
@@ -459,6 +466,12 @@ export default function AdminBookings() {
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
                     <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
+                        {errorMessage && (
+                            <div className="bg-destructive/10 text-destructive text-xs p-3 rounded-sm border border-destructive/20 flex items-start gap-2 animate-in fade-in zoom-in-95 duration-150">
+                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                <div className="font-semibold leading-tight">{errorMessage}</div>
+                            </div>
+                        )}
                         <div className="grid gap-2"><Label>Nome Ospite</Label><Input required value={manualForm.guest_name} onChange={e => setManualForm({ ...manualForm, guest_name: e.target.value })} /></div>
                         <div className="grid gap-2"><Label>Email</Label><Input type="email" required value={manualForm.guest_email} onChange={e => setManualForm({ ...manualForm, guest_email: e.target.value })} /></div>
                         <div className="grid gap-2"><Label>Telefono</Label><Input type="tel" value={manualForm.guest_phone} onChange={e => setManualForm({ ...manualForm, guest_phone: e.target.value })} placeholder="+39..." /></div>
