@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/ui/badge";
@@ -138,11 +138,7 @@ export default function Inbox() {
     const [active, setActive] = useState(null);
     const [showReply, setShowReply] = useState(false);
 
-    useEffect(() => {
-        load();
-    }, []);
-
-    const load = async () => {
+    const load = useCallback(async () => {
         try {
             const r = await api.get("/admin/messages");
             setMessages(r.data);
@@ -151,7 +147,12 @@ export default function Inbox() {
                 if (updated) setActive(updated);
             }
         } catch (e) { toast.error("Errore caricamento messaggi"); }
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        load();
+    }, [load]);
 
     const deleteMsg = async (id) => {
         if (!confirm("Eliminare questo messaggio definitivamente?")) return;
