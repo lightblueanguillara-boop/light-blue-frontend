@@ -56,7 +56,7 @@ export default function Home() {
         try {
             await api.post("/contact", form);
             toast.success("Messaggio inviato. Ti risponderemo al più presto.");
-            setForm({ name: "", email: "", phone: "", message: "...form.message", consent_newsletter: false });
+            setForm({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
         } catch {
             toast.error("Errore durante l'invio. Riprova.");
         } finally {
