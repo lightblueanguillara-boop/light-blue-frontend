@@ -10,8 +10,8 @@ export default function Header() {
         <header className="glass-header sticky top-0 z-50" data-testid="public-header">
             <div className="mx-auto max-w-7xl px-6 sm:px-10 py-5 flex items-center justify-between">
                 <Link to="/" className="flex items-center gap-3" data-testid="logo-link">
-                    <div className="w-9 h-9 rounded-sm bg-lake-blue/10 border border-lake-blue/40 grid place-items-center overflow-hidden p-1.5">
-                        <img src="/favicon.ico" alt="Logo" className="w-full h-full object-contain" />
+                    <div className="w-11 h-11 rounded-full bg-transparent overflow-hidden flex items-center justify-center">
+                        <img src="/favicon.ico" alt="Logo" className="w-full h-full object-contain rounded-full" />
                     </div>
                     <div className="leading-tight">
                         <p className="font-display text-lg tracking-tight text-lake-ink">Light Blue</p>
