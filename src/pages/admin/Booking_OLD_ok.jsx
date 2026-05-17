@@ -421,7 +421,7 @@ export default function AdminBookings() {
                                 <div>
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CreditCard className="w-3 h-3" /> Stripe Payment ID</Label>
                                     <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-emerald-700 font-bold border-slate-200 uppercase tracking-tighter">
-                                        {selectedBooking.stripe_payment_intent_id || "NON DISPONIBILE"}
+                                        {selectedBooking.payment_intent_id || "NON DISPONIBILE"}
                                     </code>
                                 </div>
                             </div>
