@@ -48,16 +48,35 @@ export default function AdminBookings() {
     const activeItems = useMemo(() => {
         return items.filter((b) => b.status !== "cancelled").filter((b) => {
             const searchTerm = search.toLowerCase();
-            const matchesSearch =
-                (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
-                (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
-                (b.id?.toString() || "").includes(searchTerm);
-            const matchesStatus = filterStatus === "all" || (filterStatus === "external" ? (b.source === "airbnb" || b.source === "booking") : b.status === filterStatus);
+            
+            const guestName = b.guest_name ? b.guest_name.toLowerCase() : "";
+            const guestEmail = b.guest_email ? b.guest_email.toLowerCase() : "";
+            const bookingId = b.id ? b.id.toString() : "";
+            
+            const matchesSearch = guestName.includes(searchTerm) || 
+                                  guestEmail.includes(searchTerm) || 
+                                  bookingId.includes(searchTerm);
+
+            let matchesStatus = true;
+            if (filterStatus !== "all") {
+                if (filterStatus === "external") {
+                    matchesStatus = b.source === "airbnb" || b.source === "booking";
+                } else {
+                    matchesStatus = b.status === filterStatus;
+                }
+            }
+
             const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
             
-            // CORREZIONE SINTASSI: Risolto il token inaspettato con un array .includes() pulito
-            const matchesSource = filterSource === "all" || (filterSource === "external" ? ["airbnb", "booking", "external"].includes(b.source) : b.source === filterSource);
-            
+            let matchesSource = true;
+            if (filterSource !== "all") {
+                if (filterSource === "external") {
+                    matchesSource = b.source === "airbnb" || b.source === "booking" || b.source === "external";
+                } else {
+                    matchesSource = b.source === filterSource;
+                }
+            }
+
             return matchesSearch && matchesStatus && matchesPayment && matchesSource;
         });
     }, [items, search, filterStatus, filterPayment, filterSource]);
@@ -65,11 +84,13 @@ export default function AdminBookings() {
     const archivedItems = useMemo(() => {
         return items.filter((b) => b.status === "cancelled").filter((b) => {
             const searchTerm = search.toLowerCase();
-            return (
-                (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
-                (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
-                (b.id?.toString() || "").includes(searchTerm);
-            );
+            const guestName = b.guest_name ? b.guest_name.toLowerCase() : "";
+            const guestEmail = b.guest_email ? b.guest_email.toLowerCase() : "";
+            const bookingId = b.id ? b.id.toString() : "";
+
+            return guestName.includes(searchTerm) || 
+                   guestEmail.includes(searchTerm) || 
+                   bookingId.includes(searchTerm);
         });
     }, [items, search]);
 
@@ -425,7 +446,7 @@ export default function AdminBookings() {
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CreditCard className="w-3 h-3" /> Stripe Payment ID</Label>
                                     <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-emerald-700 font-bold border-slate-200 uppercase tracking-tighter">
                                         {selectedBooking.payment_intent_id || "NON DISPONIBILE"}
-                                     codes
+                                    </code>
                                 </div>
                             </div>
                         </div>
