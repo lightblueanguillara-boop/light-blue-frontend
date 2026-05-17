@@ -65,7 +65,7 @@ export default function AdminBookings() {
             return (
                 (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
                 (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
-                (b.id?.toString() || "").includes(searchTerm)
+                (b.id?.toString() || "").includes(searchTerm);
             );
         });
     }, [items, search]);
@@ -88,7 +88,10 @@ export default function AdminBookings() {
             await api.patch(`/admin/bookings/${id}`, patch);
             toast.success("Aggiornato");
             load();
-        } catch { toast.error("Errore durante l'aggiornamento"); }
+        } catch (err) { 
+            const errorMsg = err.response?.data?.detail || "Errore durante l'aggiornamento";
+            toast.error(errorMsg); 
+        }
     };
 
     const askCancel = (b) => {
@@ -129,7 +132,7 @@ export default function AdminBookings() {
             };
             if (manualForm.id) {
                 await api.patch(`/admin/bookings/${manualForm.id}`, payload);
-                toast.success("Modificata con successo");
+                toast.success("Modificata con successo e notifica email inviata");
             } else {
                 await api.post("/admin/bookings/manual", {
                     ...payload,
@@ -144,7 +147,10 @@ export default function AdminBookings() {
             setManualOpen(false);
             setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" });
             load();
-        } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
+        } catch (err) { 
+            const errorMsg = err.response?.data?.detail || "Errore nel salvataggio";
+            toast.error(errorMsg); 
+        } finally { setProcessing(false); }
     };
 
     const openEdit = (b) => {
