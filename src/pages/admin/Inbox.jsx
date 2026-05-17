@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/ui/badge";
 import { fmtItDateTime } from "../../lib/date";
+import { Trash2 } from "lucide-react"; // Icona già presente ma inutilizzata
 
 // ─── Reply Modal ──────────────────────────────────────────────────────────────
 function ReplyModal({ msg, onClose, onSent }) {
@@ -29,37 +30,34 @@ function ReplyModal({ msg, onClose, onSent }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-sm border border-lake-border w-full max-w-2xl shadow-xl">
                 <div className="p-6 border-b border-lake-border flex justify-between items-center">
-                    <h3 className="font-display text-xl text-lake-ink">Invia Risposta</h3>
+                    <h3 className="font-display text-lg text-lake-ink">Rispondi a {msg.name}</h3>
                     <button onClick={onClose} className="text-lake-ink/40 hover:text-lake-ink">✕</button>
                 </div>
                 <div className="p-6 space-y-4">
-                    <div>
-                        <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 block mb-1">Oggetto Email</label>
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 font-bold">Oggetto</label>
                         <input 
+                            type="text" 
+                            className="w-full border border-lake-border rounded-sm px-3 py-2 text-sm text-lake-ink focus:outline-none focus:border-lake-blue"
                             value={subject} 
-                            onChange={e => setSubject(e.target.value)}
-                            className="w-full p-3 border border-lake-border rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-lake-blue"
+                            onChange={e => setSubject(e.target.value)} 
                         />
                     </div>
-                    <div>
-                        <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 block mb-1">Messaggio (HTML o Testo)</label>
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 font-bold">Messaggio (HTML supportato)</label>
                         <textarea 
-                            value={html} 
-                            onChange={e => setHtml(e.target.value)}
                             rows={8}
-                            placeholder="Scrivi qui la tua risposta..."
-                            className="w-full p-3 border border-lake-border rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-lake-blue font-mono"
+                            className="w-full border border-lake-border rounded-sm px-3 py-2 text-sm text-lake-ink focus:outline-none focus:border-lake-blue font-mono"
+                            placeholder="Buongiorno... <br/> Cordiali saluti."
+                            value={html} 
+                            onChange={e => setHtml(e.target.value)} 
                         />
                     </div>
                 </div>
-                <div className="p-6 border-t border-lake-border flex justify-end gap-3">
-                    <button onClick={onClose} className="px-6 py-2 text-sm text-lake-ink/60">Annulla</button>
-                    <button 
-                        onClick={send} 
-                        disabled={sending}
-                        className="px-6 py-2 bg-lake-blue text-white rounded-sm text-sm disabled:opacity-50"
-                    >
-                        {sending ? "Invio..." : "Invia Email"}
+                <div className="p-6 border-t border-lake-border bg-lake-sand/10 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 border border-lake-border text-xs text-lake-ink rounded-sm hover:bg-lake-sand/20">Annulla</button>
+                    <button onClick={send} disabled={sending} className="px-4 py-2 bg-lake-blue text-white text-xs rounded-sm hover:opacity-90 disabled:opacity-50">
+                        {sending ? "Invio..." : "Invia Risposta"}
                     </button>
                 </div>
             </div>
@@ -67,134 +65,156 @@ function ReplyModal({ msg, onClose, onSent }) {
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main Inbox Component ──────────────────────────────────────────────────────
 export default function Inbox() {
     const [messages, setMessages] = useState([]);
     const [active, setActive] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [showReply, setShowReply] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
-    const load = useCallback(async () => {
+    const loadMessages = useCallback(async () => {
         try {
             const r = await api.get("/admin/messages");
-            setMessages(r.data);
-        } catch (e) { toast.error("Errore caricamento messaggi"); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+            const data = Array.isArray(r) ? r : (r?.data || []);
+            setMessages(data);
+        } catch {
+            toast.error("Impossibile caricare i messaggi.");
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => {
-        load();
-    }, [load]);
+        loadMessages();
+    }, [loadMessages]);
 
-    const deleteMsg = async (id) => {
-        if (!confirm("Eliminare questo messaggio definitivamente?")) return;
+    // Funzione per eliminare la chat attiva
+    const deleteMessage = async (id) => {
+        if (!window.confirm("Sei sicuro di voler eliminare definitivamente questa chat? Questa azione non è reversibile.")) return;
+        setDeleting(true);
         try {
-            await api.patch(`/admin/messages/${id}`, { status: 'deleted' });
-            toast.success("Messaggio eliminato");
+            await api.delete(`/admin/messages/${id}`);
+            toast.success("Chat eliminata con successo.");
+            setMessages(prev => prev.filter(m => m.id !== id));
             setActive(null);
-            load();
-        } catch (e) { toast.error("Errore eliminazione"); }
+        } catch (e) {
+            toast.error(e?.response?.data?.detail || "Errore durante l'eliminazione.");
+        } finally {
+            setDeleting(false);
+        }
     };
 
-    const setStatus = async (id, status) => {
-        try {
-            const r = await api.patch(`/admin/messages/${id}`, { status });
-            setActive(r.data);
-            setMessages(prev => prev.map(m => m.id === id ? r.data : m));
-        } catch (e) { toast.error("Errore aggiornamento stato"); }
-    };
+    if (loading) {
+        return (
+            <div className="p-10 text-center italic text-lake-ink/40 font-light">
+                Caricamento messaggi...
+            </div>
+        );
+    }
 
     return (
         <>
-            <div className="flex h-[calc(100vh-120px)] gap-6">
-                {/* Sidebar Elenco */}
-                <div className="w-1/3 border border-lake-border rounded-sm bg-white overflow-y-auto">
-                    {messages.map((m) => (
-                        <div 
-                            key={m.id}
-                            onClick={() => setActive(m)}
-                            className={`p-5 border-b border-lake-border cursor-pointer transition-colors ${
-                                active?.id === m.id ? "bg-lake-sand/20" : "hover:bg-gray-50"
-                            }`}
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="text-xs font-bold text-lake-blue uppercase tracking-tighter">
-                                    {m.status === 'replied' ? '✓ Risposto' : m.status}
-                                </span>
-                                <span className="text-[10px] text-lake-ink/40">{fmtItDateTime(m.created_at)}</span>
-                            </div>
-                            <h4 className="font-medium text-lake-ink truncate">{m.name}</h4>
-                            <p className="text-xs text-lake-ink/60 truncate">{m.message}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Dettaglio e Chat */}
-                <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2">
-                    {active ? (
-                        <div className="space-y-6 pb-10">
-                            {/* Scheda Messaggio Originale — identica all'originale */}
-                            <div className="bg-white border border-lake-border rounded-sm p-8 shadow-sm">
-                                <div className="flex justify-between items-start mb-8">
-                                    <div>
-                                        <h2 className="font-display text-3xl text-lake-ink">{active.name}</h2>
-                                        <p className="text-lake-blue text-sm">{active.email} • {active.phone || "No tel"}</p>
-                                    </div>
-                                    <Badge variant="outline">{active.status}</Badge>
-                                </div>
-                                
-                                <div className="bg-lake-cream/30 p-6 rounded-sm border border-lake-border/50 italic text-lake-ink/80 leading-relaxed">
-                                    "{active.message}"
-                                </div>
-
-                                <div className="mt-8 flex gap-3 border-t border-lake-border pt-6">
-                                    <button 
-                                        onClick={() => setShowReply(true)}
-                                        className="px-6 py-2.5 bg-lake-blue text-white rounded-sm text-sm hover:bg-lake-ink transition-all"
+            <div className="grid md:grid-cols-12 border border-lake-border bg-white rounded-sm h-[calc(100vh-220px)] shadow-sm overflow-hidden">
+                {/* LISTA MESSAGGI (COL 5) */}
+                <div className="md:col-span-5 border-r border-lake-border flex flex-col h-full bg-lake-sand/5">
+                    <div className="p-4 border-b border-lake-border bg-white">
+                        <h2 className="font-display text-lg text-lake-ink">Richiesta Informazioni ({messages.length})</h2>
+                    </div>
+                    <div className="flex-1 overflow-y-auto divide-y divide-lake-border">
+                        {messages.length === 0 ? (
+                            <p className="p-8 text-center text-sm italic text-lake-ink/40">Nessun messaggio ricevuto.</p>
+                        ) : (
+                            messages.map((m) => {
+                                const isSelected = active?.id === m.id;
+                                return (
+                                    <div 
+                                        key={m.id}
+                                        onClick={() => setActive(m)}
+                                        className={`p-4 cursor-pointer transition-colors space-y-2 text-left ${isSelected ? "bg-lake-blue/10 border-l-2 border-lake-blue" : "hover:bg-lake-sand/20"}`}
                                     >
-                                        Rispondi ora
-                                    </button>
-                                    <button 
-                                        onClick={() => setStatus(active.id, active.status === "replied" ? "pending" : "replied")}
-                                        className="px-6 py-2.5 border border-lake-border text-lake-ink rounded-sm text-sm hover:bg-gray-50"
-                                    >
-                                        {active.status === "replied" ? "Segna come da gestire" : "Segna come risposto"}
-                                    </button>
-                                    <button onClick={() => deleteMsg(active.id)} className="px-6 py-2.5 text-red-600 text-sm hover:underline ml-auto">
-                                        Elimina
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* CRONOLOGIA CHAT — stesso stile bubble dell'originale, visibile solo se ci sono risposte */}
-                            {active.replies && active.replies.length > 0 && (
-                                <div className="space-y-4">
-                                    <h3 className="text-[10px] uppercase tracking-[0.2em] text-lake-ink/40 font-bold px-2">Cronologia Conversazione</h3>
-
-                                    {/* Messaggio iniziale del cliente */}
-                                    <div className="flex flex-col items-start max-w-[80%]">
-                                        <div className="bg-white border border-lake-border p-4 rounded-sm rounded-bl-none shadow-sm">
-                                            <p className="text-xs font-bold text-lake-blue mb-1">{active.name}</p>
-                                            <p className="text-sm text-lake-ink">{active.message}</p>
-                                            <p className="text-[9px] text-lake-ink/40 mt-2">{fmtItDateTime(active.created_at)}</p>
+                                        <div className="flex justify-between items-start gap-2">
+                                            <p className="font-medium text-sm text-lake-ink truncate">{m.name}</p>
+                                            <span className="text-[10px] text-lake-ink/40 whitespace-nowrap">{fmtItDateTime(m.created_at)}</span>
+                                        </div>
+                                        <p className="text-xs text-lake-ink/80 font-medium truncate">{m.subject || "Richiesta info"}</p>
+                                        <p className="text-xs text-lake-ink/60 line-clamp-2 italic font-light">{m.message}</p>
+                                        <div className="flex justify-between items-center pt-1">
+                                            <span className="text-[10px] text-lake-ink/40 truncate">{m.email}</span>
+                                            <Badge variant={m.status === "replied" ? "success" : "warning"} className="text-[9px] uppercase tracking-wider px-1.5 py-0">
+                                                {m.status === "replied" ? "Risposto" : "Da gestire"}
+                                            </Badge>
                                         </div>
                                     </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
 
-                                    {/* Risposte inviate dall'admin */}
-                                    {active.replies.map((reply) => (
-                                        <div key={reply.id} className="flex flex-col items-end w-full">
-                                            <div className="max-w-[80%] bg-lake-blue/5 border border-lake-blue/20 p-4 rounded-sm rounded-br-none shadow-sm">
-                                                <p className="text-xs font-bold text-lake-ink mb-1">Tu (Admin)</p>
-                                                <p className="text-[11px] text-lake-ink/40 mb-2 uppercase tracking-tight">Oggetto: {reply.subject}</p>
+                {/* VISUALIZZAZIONE CHAT / DETTAGLIO (COL 7) */}
+                <div className="md:col-span-7 flex flex-col h-full bg-white">
+                    {active ? (
+                        <div className="flex flex-col h-full">
+                            {/* HEADER DETTAGLIO */}
+                            <div className="p-6 border-b border-lake-border flex justify-between items-start bg-lake-sand/5">
+                                <div className="space-y-1 text-left">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-display text-xl text-lake-ink">{active.name}</h3>
+                                        <Badge variant={active.status === "replied" ? "success" : "warning"} className="text-[9px] uppercase tracking-wider">
+                                            {active.status === "replied" ? "Risposto" : "Da gestire"}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-lake-ink/60">
+                                        Email: <span className="text-lake-ink/80 font-medium">{active.email}</span> 
+                                        {active.phone && <> &middot; Tel: <span className="text-lake-ink/80 font-medium">{active.phone}</span></>}
+                                    </p>
+                                    <p className="text-sm font-medium text-lake-ink pt-1">Oggetto: {active.subject || "Richiesta info"}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        disabled={deleting}
+                                        onClick={() => deleteMessage(active.id)}
+                                        className="p-2 border border-rose-200 text-rose-600 rounded-sm hover:bg-rose-50 transition-colors disabled:opacity-50"
+                                        title="Elimina chat"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowReply(true)}
+                                        className="px-4 py-2 bg-lake-blue text-white text-xs rounded-sm hover:opacity-90"
+                                    >
+                                        Rispondi
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* CORPO CRONOLOGIA MESSAGGI */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-lake-cream/10 flex flex-col">
+                                {/* Messaggio Iniziale dell'Utente */}
+                                <div className="bg-lake-sand/20 border border-lake-border/60 rounded-sm p-4 max-w-[85%] text-left self-start shadow-sm">
+                                    <p className="text-[10px] uppercase tracking-widest text-lake-blue font-bold mb-1">Richiesta iniziale</p>
+                                    <p className="text-sm text-lake-ink whitespace-pre-line leading-relaxed font-light">{active.message}</p>
+                                    <p className="text-[9px] text-lake-ink/40 mt-2 text-right">{fmtItDateTime(active.created_at)}</p>
+                                </div>
+
+                                {/* Eventuali Risposte dell'Amministratore */}
+                                {active.chat && active.chat.length > 0 && (
+                                    <div className="space-y-4 pt-4 border-t border-dashed border-lake-border">
+                                        <p className="text-[10px] uppercase tracking-widest text-center text-lake-ink/40 font-bold">Cronologia risposte</p>
+                                        {active.chat.map((reply) => (
+                                            <div key={reply.id} className="bg-lake-blue/5 border border-lake-blue/20 rounded-sm p-4 max-w-[85%] text-left self-end shadow-sm">
+                                                <p className="text-[10px] uppercase tracking-widest text-lake-blue font-bold mb-1">Tua risposta ({reply.subject})</p>
                                                 <div 
                                                     className="text-sm text-lake-ink prose prose-sm max-w-none"
                                                     dangerouslySetInnerHTML={{ __html: reply.content }}
                                                 />
                                                 <p className="text-[9px] text-lake-ink/40 mt-2 text-right">{fmtItDateTime(reply.created_at)}</p>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center p-10 border border-dashed border-lake-border rounded-sm">
