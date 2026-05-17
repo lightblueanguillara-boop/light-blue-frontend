@@ -22,70 +22,42 @@ const statusColors = {
     external: "bg-slate-100 text-slate-700",
 };
 
-export default function Bookings() {
+export default function AdminBookings() {
     const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [filterPayment, setFilterPayment] = useState("all");
     const [filterSource, setFilterSource] = useState("all");
 
-    // Detail Dialog
-    const [selected, setSelected] = useState(null);
-
-    // Manual / Edit Dialog
-    const [editTarget, setEditTarget] = useState(null);
-    const [isManualOpen, setIsManualOpen] = useState(false);
+    const [manualOpen, setManualOpen] = useState(false);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
     const [processing, setProcessing] = useState(false);
 
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [bookingToCancel, setBookingToCancel] = useState(null);
+    const [cancelling, setCancelling] = useState(false);
+
     const [manualForm, setManualForm] = useState({
-        guest_name: "",
-        guest_email: "",
-        guest_phone: "",
-        source: "manual",
-        check_in: "",
-        check_out: "",
-        adults: "2",
-        children: "0",
-        total_price: "",
-        notes: "",
+        guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale"
     });
 
-    useEffect(() => {
-        load();
-    }, []);
-
-    async function load() {
-        try {
-            const r = await api.get("/admin/bookings");
-            setItems(r.data);
-        } catch (e) {
-            toast.error("Errore nel caricamento delle prenotazioni");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
+    useEffect(() => { load(); }, []);
 
     const activeItems = useMemo(() => {
         return items.filter((b) => b.status !== "cancelled").filter((b) => {
             const searchTerm = search.toLowerCase();
-            
             const matchesSearch =
                 (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
                 (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
                 (b.id?.toString() || "").includes(searchTerm);
-                
-            const matchesStatus = filterStatus === "all" || 
-                (filterStatus === "external" ? (b.source === "airbnb" || b.source === "booking") : b.status === filterStatus);
-                
+            const matchesStatus = filterStatus === "all" || (filterStatus === "external" ? (b.source === "airbnb" || b.source === "booking") : b.status === filterStatus);
             const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
             
-            // CORREZIONE SINTASSI: Evita il token inaspettato risolvendo con un array .includes()
-            const matchesSource = filterSource === "all" || 
-                (filterSource === "external" 
-                    ? ["airbnb", "booking", "external"].includes(b.source) 
-                    : b.source === filterSource);
-                    
+            // CORREZIONE SINTASSI: Risolto il token inaspettato con un array .includes() pulito
+            const matchesSource = filterSource === "all" || (filterSource === "external" ? ["airbnb", "booking", "external"].includes(b.source) : b.source === filterSource);
+            
             return matchesSearch && matchesStatus && matchesPayment && matchesSource;
         });
     }, [items, search, filterStatus, filterPayment, filterSource]);
@@ -96,186 +68,379 @@ export default function Bookings() {
             return (
                 (b.guest_name?.toLowerCase() || "").includes(searchTerm) ||
                 (b.guest_email?.toLowerCase() || "").includes(searchTerm) ||
-                (b.id?.toString() || "").includes(searchTerm)
+                (b.id?.toString() || "").includes(searchTerm);
             );
         });
     }, [items, search]);
 
-    async function handleManualSubmit(e) {
+    const bookedDates = useMemo(() => {
+        const dates = [];
+        items.filter(b => b.status !== "cancelled").forEach(b => {
+            let current = new Date(b.check_in);
+            const end = new Date(b.check_out);
+            while (current < end) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+        });
+        return dates;
+    }, [items]);
+
+    const update = async (id, patch) => {
+        try {
+            await api.patch(`/admin/bookings/${id}`, patch);
+            toast.success("Aggiornato");
+            load();
+        } catch { toast.error("Errore durante l'aggiornamento"); }
+    };
+
+    const askCancel = (b) => {
+        setBookingToCancel(b);
+        setCancelDialogOpen(true);
+    };
+
+    const confirmCancel = async () => {
+        if (!bookingToCancel) return;
+        setCancelling(true);
+        try {
+            const res = await api.delete(`/admin/bookings/${bookingToCancel.id}`);
+            if (res.data?.email_sent) {
+                toast.success("Prenotazione archiviata. Email di cancellazione inviata all'ospite.");
+            } else {
+                toast.success("Prenotazione archiviata. Nessuna email inviata (ospite senza indirizzo email).");
+            }
+            setCancelDialogOpen(false);
+            setBookingToCancel(null);
+            load();
+        } catch {
+            toast.error("Errore durante la cancellazione");
+        } finally {
+            setCancelling(false);
+        }
+    };
+
+    const handleManualSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
         try {
-            if (editTarget) {
-                const r = await api.patch(`/admin/bookings/${encodeURIComponent(editTarget.id)}`, manualForm);
-                toast.success("Prenotazione aggiornata con successo");
-                setEditTarget(null);
+            const priceAsNumber = parseFloat(manualForm.total_price) || 0;
+            const payload = { 
+                ...manualForm, 
+                total_price: priceAsNumber,
+                adults: parseInt(manualForm.adults),
+                children: parseInt(manualForm.children)
+            };
+            if (manualForm.id) {
+                await api.patch(`/admin/bookings/${manualForm.id}`, payload);
+                toast.success("Modificata con successo");
             } else {
-                await api.post("/admin/bookings/manual", manualForm);
-                toast.success("Prenotazione manuale creata");
+                await api.post("/admin/bookings/manual", {
+                    ...payload,
+                    id: `man-${Date.now()}`,
+                    status: "confirmed",
+                    payment_status: "fully_paid",
+                    source: "manual",
+                    created_at: new Date().toISOString()
+                });
+                toast.success("Registrata con successo");
             }
-            setIsManualOpen(false);
-            setManualForm({
-                guest_name: "",
-                guest_email: "",
-                guest_phone: "",
-                source: "manual",
-                check_in: "",
-                check_out: "",
-                adults: "2",
-                children: "0",
-                total_price: "",
-                notes: "",
-            });
+            setManualOpen(false);
+            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" });
             load();
-        } catch (err) {
-            toast.error(err?.response?.data?.detail || "Errore durante il salvataggio");
-        } finally {
-            setProcessing(false);
-        }
-    }
+        } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
+    };
 
-    function openEdit(b) {
-        setEditTarget(b);
-        setManualForm({
-            guest_name: b.guest_name || "",
-            guest_email: b.guest_email || "",
-            guest_phone: b.guest_phone || "",
-            source: b.source || "manual",
-            check_in: b.check_in || "",
-            check_out: b.check_out || "",
-            adults: b.adults?.toString() || "2",
-            children: b.children?.toString() || "0",
-            total_price: b.total_price?.toString() || "",
-            notes: b.notes || "",
+    const openEdit = (b) => {
+        setManualForm({ 
+            id: b.id, 
+            guest_name: b.guest_name || "", 
+            guest_email: b.guest_email || "", 
+            guest_phone: b.guest_phone || "", 
+            check_in: b.check_in || "", 
+            check_out: b.check_out || "", 
+            total_price: String(b.total_price || 0), 
+            adults: b.adults || 2,
+            children: b.children || 0,
+            notes: b.notes || "" 
         });
-        setIsManualOpen(true);
-    }
+        setManualOpen(true);
+    };
+
+    const openDetail = (b) => {
+        setSelectedBooking(b);
+        setDetailOpen(true);
+    };
+
+    const BookingsTable = ({ rows, showActions = true }) => (
+        <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
+            <Table>
+                <TableHeader>
+                    <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
+                        <TableHead>Ospite</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Importo</TableHead>
+                        <TableHead>Stato Prenotazione</TableHead>
+                        <TableHead>Stato Pagamento</TableHead>
+                        <TableHead>Fonte</TableHead>
+                        {showActions && <TableHead className="text-right">Azioni</TableHead>}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {rows.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={showActions ? 7 : 6} className="text-center py-12 text-lake-ink/40 text-sm italic">
+                                Nessuna prenotazione trovata
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {rows.map((b) => (
+                        <TableRow key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                            <TableCell>
+                                <button onClick={() => openDetail(b)} className="text-left group flex flex-col">
+                                    <div className="flex items-center gap-1">
+                                        <span className="font-bold text-lake-ink group-hover:text-lake-blue transition-colors underline decoration-dotted underline-offset-4 tracking-tight">
+                                            {b.guest_name}
+                                        </span>
+                                        <Info className="w-3 h-3 text-lake-ink/20 group-hover:text-lake-blue" />
+                                    </div>
+                                    <span className="text-[10px] text-lake-ink/50 uppercase">{b.guest_email}</span>
+                                </button>
+                            </TableCell>
+                            <TableCell className="text-sm font-medium whitespace-nowrap italic text-slate-600 tracking-tight">
+                                {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
+                            </TableCell>
+                            <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
+
+                            <TableCell>
+                                {showActions ? (
+                                    <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
+                                        <SelectTrigger className="w-32 h-8 text-[11px] font-semibold"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="pending">In attesa</SelectItem>
+                                            <SelectItem value="confirmed">Confermata</SelectItem>
+                                            <SelectItem value="cancelled">Cancellata</SelectItem>
+                                            <SelectItem value="external">Esterna</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold`}>
+                                        Cancellata
+                                    </Badge>
+                                )}
+                            </TableCell>
+
+                            <TableCell>
+                                <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
+                                    <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
+                                        <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold w-full justify-center`}>
+                                            {b.payment_status}
+                                        </Badge>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="unpaid">Non pagato</SelectItem>
+                                        <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                                        <SelectItem value="fully_paid">Saldato</SelectItem>
+                                        <SelectItem value="refunded">Rimborsato</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </TableCell>
+
+                            <TableCell className="text-[10px] uppercase font-black text-lake-ink/40 tracking-widest">{b.source}</TableCell>
+
+                            {showActions && (
+                                <TableCell className="text-right">
+                                    <div className="flex flex-col items-end gap-1 text-[11px]">
+                                        <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
+                                            <Pencil className="w-3 h-3" /> MODIFICA
+                                        </button>
+                                        <button onClick={() => askCancel(b)} className="text-red-500 hover:underline font-bold uppercase tracking-tighter flex items-center gap-1">
+                                            <Trash2 className="w-3 h-3" /> ELIMINA
+                                        </button>
+                                    </div>
+                                </TableCell>
+                            )}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-lake-border pb-5">
+        <div className="p-10" data-testid="admin-bookings-page">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-lake-ink">Prenotazioni</h1>
-                    <p className="text-sm text-lake-ink/60 mt-1">Gestisci i soggiorni, i pagamenti e sincronizza i canali esterni.</p>
+                    <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
+                    <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
                 </div>
-                <Button onClick={() => { setEditTarget(null); setIsManualOpen(true); }} className="bg-lake-teal hover:bg-lake-teal/90 text-white rounded-sm flex items-center gap-2">
-                    <Plus className="h-4 w-4" /> Nuova Prenotazione
+                <Button onClick={() => setManualOpen(true)} className="bg-lake-blue hover:bg-lake-blue/90">
+                    <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
                 </Button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[260px] max-w-md">
+            <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
+                <div className="relative flex-1 min-w-[250px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
-                    <Input placeholder="Cerca per ospite, email o ID..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 border-lake-border focus-visible:ring-lake-teal rounded-sm bg-white" />
+                    <Input placeholder="Cerca per nome, email o ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10" />
                 </div>
-
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-[160px] border-lake-border rounded-sm bg-white"><SelectValue placeholder="Stato" /></SelectTrigger>
-                    <SelectContent><SelectItem value="all">Tutti gli stati</SelectItem><SelectItem value="confirmed">Confermata</SelectItem><SelectItem value="pending">In attesa</SelectItem></SelectContent>
-                </Select>
-
-                <Select value={filterPayment} onValueChange={setFilterPayment}>
-                    <SelectTrigger className="w-[160px] border-lake-border rounded-sm bg-white"><SelectValue placeholder="Pagamento" /></SelectTrigger>
-                    <SelectContent><SelectItem value="all">Tutti i pagamenti</SelectItem><SelectItem value="paid">Saldato</SelectItem><SelectItem value="deposit_paid">Acconto pagato</SelectItem><SelectItem value="unpaid">Non pagato</SelectItem></SelectContent>
-                </Select>
-
-                <Select value={filterSource} onValueChange={setFilterSource}>
-                    <SelectTrigger className="w-[160px] border-lake-border rounded-sm bg-white"><SelectValue placeholder="Sorgente" /></SelectTrigger>
-                    <SelectContent><SelectItem value="all">Tutte le sorgenti</SelectItem><SelectItem value="website">Sito Web</SelectItem><SelectItem value="manual">Manuale</SelectItem><SelectItem value="external">OTA Esterne</SelectItem></SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Stato" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti gli stati</SelectItem>
+                            <SelectItem value="pending">In attesa</SelectItem>
+                            <SelectItem value="confirmed">Confermate</SelectItem>
+                            <SelectItem value="external">Esterne (Airbnb/Booking)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={filterPayment} onValueChange={setFilterPayment}>
+                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Pagamento" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutti i pagamenti</SelectItem>
+                            <SelectItem value="unpaid">Non pagato</SelectItem>
+                            <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                            <SelectItem value="fully_paid">Saldato</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={filterSource} onValueChange={setFilterSource}>
+                        <SelectTrigger className="w-32 text-xs h-10"><SelectValue placeholder="Fonte" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tutte le fonti</SelectItem>
+                            <SelectItem value="website">Sito Web</SelectItem>
+                            <SelectItem value="manual">Manuale</SelectItem>
+                            <SelectItem value="external">Esterne (Sync)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
-            <Tabs defaultValue="active" className="w-full">
-                <TabsList className="bg-lake-light border border-lake-border p-1 rounded-sm mb-4">
-                    <TabsTrigger value="active" className="rounded-sm data-[state=active]:bg-white data-[state=active]:text-lake-ink flex items-center gap-2 px-4 py-2"><List className="h-4 w-4" /> Attive ({activeItems.length})</TabsTrigger>
-                    <TabsTrigger value="archived" className="rounded-sm data-[state=active]:bg-white data-[state=active]:text-lake-ink flex items-center gap-2 px-4 py-2"><Archive className="h-4 w-4" /> Cancellate ({archivedItems.length})</TabsTrigger>
+            <Tabs defaultValue="list" className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
+                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
+                    <TabsTrigger value="archive">
+                        <Archive className="mr-2 h-4 w-4" /> Archivio
+                        {archivedItems.length > 0 && (
+                            <span className="ml-2 bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                {archivedItems.length}
+                            </span>
+                        )}
+                    </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="active" className="border border-lake-border rounded-sm bg-white overflow-hidden shadow-sm">
-                    <Table>
-                        <TableHeader className="bg-lake-light/60">
-                            <TableRow>
-                                <TableHead className="font-medium text-lake-ink/70">Ospite</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Date</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Sorgente</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Stato</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Pagamento</TableHead>
-                                <TableHead className="text-right font-medium text-lake-ink/70">Totale</TableHead>
-                                <TableHead className="w-[80px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow><TableCell colSpan={7} className="text-center py-8 text-lake-ink/50">Caricamento in corso...</TableCell></TableRow>
-                            ) : activeItems.length === 0 ? (
-                                <TableRow><TableCell colSpan={7} className="text-center py-8 text-lake-ink/50">Nessuna prenotazione attiva trovata.</TableCell></TableRow>
-                            ) : (
-                                activeItems.map((b) => (
-                                    <TableRow key={b.id} className="hover:bg-lake-light/30 transition-colors">
-                                        <TableCell><div className="font-medium text-lake-ink">{b.guest_name || "Ospite Esterno"}</div><div className="text-xs text-lake-ink/50">{b.guest_email || "Nessuna email"}</div></TableCell>
-                                        <TableCell><div className="text-sm text-lake-ink font-mono">{fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}</div></TableCell>
-                                        <TableCell><Badge variant="outline" className="capitalize text-xs font-normal border-lake-border">{b.source}</Badge></TableCell>
-                                        <TableCell><Badge className={`${statusColors[b.status] || "bg-gray-100 text-gray-700"} shadow-none border-0 rounded-sm font-normal px-2.5 py-0.5`}>{b.status}</Badge></TableCell>
-                                        <TableCell><Badge variant="secondary" className="bg-slate-100 text-slate-700 capitalize font-normal">{b.payment_status?.replace("_", " ")}</Badge></TableCell>
-                                        <TableCell className="text-right font-semibold font-mono text-lake-ink">€{parseFloat(b.total_price || 0).toFixed(2)}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-lake-ink/70 hover:text-lake-teal" onClick={() => setSelected(b)}><Info className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-lake-ink/70 hover:text-lake-teal" onClick={() => openEdit(b)}><Pencil className="h-4 w-4" /></Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                <TabsContent value="list">
+                    <BookingsTable rows={activeItems} showActions={true} />
                 </TabsContent>
 
-                <TabsContent value="archived" className="border border-lake-border rounded-sm bg-white overflow-hidden shadow-sm">
-                    <Table>
-                        <TableHeader className="bg-lake-light/60">
-                            <TableRow>
-                                <TableHead className="font-medium text-lake-ink/70">Ospite</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Date</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Sorgente</TableHead>
-                                <TableHead className="font-medium text-lake-ink/70">Pagamento</TableHead>
-                                <TableHead className="text-right font-medium text-lake-ink/70">Totale</TableHead>
-                                <TableHead className="w-[60px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {archivedItems.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-8 text-lake-ink/50">Nessuna prenotazione cancellata.</TableCell></TableRow>
-                            ) : (
-                                archivedItems.map((b) => (
-                                    <TableRow key={b.id} className="bg-rose-50/20 hover:bg-rose-50/40 transition-colors">
-                                        <TableCell><div className="font-medium text-lake-ink/70 line-through">{b.guest_name || "Ospite Esterno"}</div><div className="text-xs text-lake-ink/40">{b.guest_email}</div></TableCell>
-                                        <TableCell><div className="text-sm text-lake-ink/60 font-mono line-through">{fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}</div></TableCell>
-                                        <TableCell><Badge variant="outline" className="opacity-60 text-xs border-lake-border">{b.source}</Badge></TableCell>
-                                        <TableCell><Badge variant="outline" className="border-rose-200 text-rose-700 bg-rose-50/50 capitalize font-normal">{b.payment_status?.replace("_", " ")}</Badge></TableCell>
-                                        <TableCell className="text-right font-mono text-lake-ink/60 line-through">€{parseFloat(b.total_price || 0).toFixed(2)}</TableCell>
-                                        <TableCell><Button size="icon" variant="ghost" className="h-8 w-8 text-lake-ink/70 hover:text-lake-teal" onClick={() => setSelected(b)}><Info className="h-4 w-4" /></Button></TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                <TabsContent value="calendar" className="bg-white border border-lake-border rounded-sm p-10 flex justify-center">
+                    <DayPicker mode="multiple" locale={it} modifiers={{ booked: bookedDates }} modifiersStyles={{ booked: { backgroundColor: "#ef4444", color: "white", borderRadius: 0 } }} numberOfMonths={3} className="admin-calendar" />
+                </TabsContent>
+
+                <TabsContent value="archive">
+                    <div className="mb-4 flex items-center gap-2 text-sm text-lake-ink/60">
+                        <Archive className="w-4 h-4" />
+                        <span>Le prenotazioni cancellate vengono conservate per storico. Il rimborso va gestito manualmente su Stripe.</span>
+                    </div>
+                    <BookingsTable rows={archivedItems} showActions={false} />
                 </TabsContent>
             </Tabs>
 
-            {/* Manual Form & Edit Dialog */}
-            <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
-                <DialogContent className="sm:max-w-[500px] rounded-sm border-lake-border p-6 bg-white">
+            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <DialogContent className="sm:max-w-[440px] border-t-4 border-t-rose-400">
                     <DialogHeader>
-                        <DialogTitle className="text-lg font-semibold text-lake-ink">{editTarget ? "Modifica Prenotazione" : "Nuova Prenotazione Manuale"}</DialogTitle>
-                        <DialogDescription className="text-lake-ink/60 text-sm">Inserisci o aggiorna i dettagli del soggiorno bloccando le date sul calendario.</DialogDescription>
+                        <DialogTitle className="text-xl font-display text-lake-ink flex items-center gap-2">
+                            <Trash2 className="w-5 h-5 text-rose-500" /> Cancella prenotazione
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 space-y-1">
+                            {bookingToCancel && (
+                                <>
+                                    <span className="block font-semibold text-lake-ink">{bookingToCancel.guest_name}</span>
+                                    <span className="block text-sm">{fmtItDate(bookingToCancel.check_in)} → {fmtItDate(bookingToCancel.check_out)}</span>
+                                </>
+                            )}
+                        </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleManualSubmit} className="space-y-4 pt-3">
-                        <div className="grid gap-2"><Label>Nome Completo Ospite</Label><Input required placeholder="Mario Rossi" value={manualForm.guest_name} onChange={e => setManualForm({ ...manualForm, guest_name: e.target.value })} /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2"><Label>Email</Label><Input type="email" placeholder="mario@esempio.com" value={manualForm.guest_email} onChange={e => setManualForm({ ...manualForm, guest_email: e.target.value })} /></div>
-                            <div className="grid gap-2"><Label>Telefono</Label><Input placeholder="+39 333 1234567" value={manualForm.guest_phone} onChange={e => setManualForm({ ...manualForm, guest_phone: e.target.value })} /></div>
+                    <div className="py-2 space-y-3 text-sm text-lake-ink/80">
+                        <p>La prenotazione verrà <strong>archiviata</strong> e all'ospite verrà inviata un'email di cancellazione con indicazione che il rimborso arriverà entro <strong>5 giorni lavorativi</strong>.</p>
+                        <p className="text-xs text-lake-ink/50">Il rimborso effettivo su Stripe deve essere eseguito manualmente dal pannello Stripe.</p>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setCancelDialogOpen(false)} disabled={cancelling}>
+                            Annulla
+                        </Button>
+                        <Button onClick={confirmCancel} disabled={cancelling} className="bg-rose-500 hover:bg-rose-600 text-white">
+                            {cancelling ? "Cancellazione..." : "Sì, cancella e notifica"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-display text-lake-ink">Scheda Dettagliata</DialogTitle>
+                        <DialogDescription>Informazioni complete sulla prenotazione e dati tecnici.</DialogDescription>
+                    </DialogHeader>
+                    {selectedBooking && (
+                        <div className="space-y-6 py-4">
+                            <div className="grid grid-cols-2 gap-4 border-b pb-4">
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Users className="w-3 h-3" /> Ospite</Label>
+                                    <p className="font-bold text-lg text-lake-ink leading-tight">{selectedBooking.guest_name}</p>
+                                    <div className="flex flex-col gap-0.5 mt-1">
+                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedBooking.guest_email}</span>
+                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedBooking.guest_phone || "N/A"}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Ospiti / Fonte</Label>
+                                    <p className="font-bold text-xl text-lake-ink">{selectedBooking.adults + selectedBooking.children} Persone</p>
+                                    <Badge variant="outline" className="mt-2 uppercase text-[9px] font-black tracking-widest">{selectedBooking.source}</Badge>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 border-b pb-4 text-sm">
+                                <div>
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Soggiorno</Label>
+                                    <p className="font-bold text-lake-ink">{fmtItDate(selectedBooking.check_in)}</p>
+                                    <p className="font-bold text-lake-ink">{fmtItDate(selectedBooking.check_out)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Totale Pagato</Label>
+                                    <p className="font-bold text-2xl text-lake-blue">€{selectedBooking.total_price}</p>
+                                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{selectedBooking.payment_status}</p>
+                                </div>
+                            </div>
+                            {selectedBooking.notes && (
+                                <div className="bg-amber-50 p-3 rounded-sm border border-amber-100 flex gap-2 italic">
+                                    <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                                    <div className="text-sm text-amber-900 leading-relaxed">"{selectedBooking.notes}"</div>
+                                </div>
+                            )}
+                            <div className="bg-slate-50 p-4 rounded-sm border border-slate-100 space-y-3">
+                                <div>
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Hash className="w-3 h-3" /> Numero Prenotazione (ID)</Label>
+                                    <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-lake-ink border-slate-200">{selectedBooking.id}</code>
+                                </div>
+                                <div>
+                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CreditCard className="w-3 h-3" /> Stripe Payment ID</Label>
+                                    <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-emerald-700 font-bold border-slate-200 uppercase tracking-tighter">
+                                        {selectedBooking.payment_intent_id || "NON DISPONIBILE"}
+                                     codes
+                                </div>
+                            </div>
                         </div>
+                    )}
+                    <DialogFooter><Button onClick={() => setDetailOpen(false)} className="w-full bg-lake-ink hover:bg-lake-ink/90">Chiudi</Button></DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
+                    <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
+                        <div className="grid gap-2"><Label>Nome Ospite</Label><Input required value={manualForm.guest_name} onChange={e => setManualForm({ ...manualForm, guest_name: e.target.value })} /></div>
+                        <div className="grid gap-2"><Label>Email</Label><Input type="email" required value={manualForm.guest_email} onChange={e => setManualForm({ ...manualForm, guest_email: e.target.value })} /></div>
+                        <div className="grid gap-2"><Label>Telefono</Label><Input type="tel" value={manualForm.guest_phone} onChange={e => setManualForm({ ...manualForm, guest_phone: e.target.value })} placeholder="+39..." /></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2"><Label>Check-in</Label><Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({ ...manualForm, check_in: e.target.value })} /></div>
                             <div className="grid gap-2"><Label>Check-out</Label><Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({ ...manualForm, check_out: e.target.value })} /></div>
