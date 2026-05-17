@@ -34,19 +34,17 @@ export default function AdminBookings() {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [processing, setProcessing] = useState(false);
 
-    // Dialog di conferma cancellazione
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [bookingToCancel, setBookingToCancel] = useState(null);
     const [cancelling, setCancelling] = useState(false);
 
     const [manualForm, setManualForm] = useState({
-        guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale"
+        guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale"
     });
 
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
     useEffect(() => { load(); }, []);
 
-    // Prenotazioni attive (non cancellate)
     const activeItems = useMemo(() => {
         return items.filter((b) => b.status !== "cancelled").filter((b) => {
             const searchTerm = search.toLowerCase();
@@ -61,7 +59,6 @@ export default function AdminBookings() {
         });
     }, [items, search, filterStatus, filterPayment, filterSource]);
 
-    // Prenotazioni archiviate (cancellate)
     const archivedItems = useMemo(() => {
         return items.filter((b) => b.status === "cancelled").filter((b) => {
             const searchTerm = search.toLowerCase();
@@ -94,13 +91,11 @@ export default function AdminBookings() {
         } catch { toast.error("Errore durante l'aggiornamento"); }
     };
 
-    // Apre il dialog di conferma cancellazione
     const askCancel = (b) => {
         setBookingToCancel(b);
         setCancelDialogOpen(true);
     };
 
-    // Conferma cancellazione: chiama DELETE (che archivia + invia email)
     const confirmCancel = async () => {
         if (!bookingToCancel) return;
         setCancelling(true);
@@ -126,7 +121,12 @@ export default function AdminBookings() {
         setProcessing(true);
         try {
             const priceAsNumber = parseFloat(manualForm.total_price) || 0;
-            const payload = { ...manualForm, total_price: priceAsNumber };
+            const payload = { 
+                ...manualForm, 
+                total_price: priceAsNumber,
+                adults: parseInt(manualForm.adults),
+                children: parseInt(manualForm.children)
+            };
             if (manualForm.id) {
                 await api.patch(`/admin/bookings/${manualForm.id}`, payload);
                 toast.success("Modificata con successo");
@@ -142,13 +142,24 @@ export default function AdminBookings() {
                 toast.success("Registrata con successo");
             }
             setManualOpen(false);
-            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", notes: "Prenotazione manuale" });
+            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" });
             load();
         } catch { toast.error("Errore nel salvataggio"); } finally { setProcessing(false); }
     };
 
     const openEdit = (b) => {
-        setManualForm({ id: b.id, guest_name: b.guest_name || "", guest_email: b.guest_email || "", guest_phone: b.guest_phone || "", check_in: b.check_in || "", check_out: b.check_out || "", total_price: String(b.total_price || 0), notes: b.notes || "" });
+        setManualForm({ 
+            id: b.id, 
+            guest_name: b.guest_name || "", 
+            guest_email: b.guest_email || "", 
+            guest_phone: b.guest_phone || "", 
+            check_in: b.check_in || "", 
+            check_out: b.check_out || "", 
+            total_price: String(b.total_price || 0), 
+            adults: b.adults || 2,
+            children: b.children || 0,
+            notes: b.notes || "" 
+        });
         setManualOpen(true);
     };
 
@@ -157,7 +168,6 @@ export default function AdminBookings() {
         setDetailOpen(true);
     };
 
-    // Tabella riutilizzabile
     const BookingsTable = ({ rows, showActions = true }) => (
         <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
             <Table>
@@ -332,7 +342,6 @@ export default function AdminBookings() {
                 </TabsContent>
             </Tabs>
 
-            {/* Dialog conferma cancellazione */}
             <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                 <DialogContent className="sm:max-w-[440px] border-t-4 border-t-rose-400">
                     <DialogHeader>
@@ -363,7 +372,6 @@ export default function AdminBookings() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog dettaglio prenotazione */}
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
                 <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
                     <DialogHeader>
@@ -383,7 +391,7 @@ export default function AdminBookings() {
                                 </div>
                                 <div className="text-right">
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold">Ospiti / Fonte</Label>
-                                    <p className="font-bold text-xl text-lake-ink">{selectedBooking.num_guests || 1} Persone</p>
+                                    <p className="font-bold text-xl text-lake-ink">{selectedBooking.adults + selectedBooking.children} Persone</p>
                                     <Badge variant="outline" className="mt-2 uppercase text-[9px] font-black tracking-widest">{selectedBooking.source}</Badge>
                                 </div>
                             </div>
@@ -423,7 +431,6 @@ export default function AdminBookings() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog nuova/modifica prenotazione */}
             <Dialog open={manualOpen} onOpenChange={setManualOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
@@ -434,6 +441,10 @@ export default function AdminBookings() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2"><Label>Check-in</Label><Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({ ...manualForm, check_in: e.target.value })} /></div>
                             <div className="grid gap-2"><Label>Check-out</Label><Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({ ...manualForm, check_out: e.target.value })} /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2"><Label>Adulti</Label><Input type="number" min="1" required value={manualForm.adults} onChange={e => setManualForm({ ...manualForm, adults: e.target.value })} /></div>
+                            <div className="grid gap-2"><Label>Bambini</Label><Input type="number" min="0" required value={manualForm.children} onChange={e => setManualForm({ ...manualForm, children: e.target.value })} /></div>
                         </div>
                         <div className="grid gap-2"><Label>Prezzo Totale (€)</Label><Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({ ...manualForm, total_price: e.target.value })} /></div>
                         <DialogFooter><Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">{processing ? "Salvataggio..." : "Salva e Aggiorna"}</Button></DialogFooter>
