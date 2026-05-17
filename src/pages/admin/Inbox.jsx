@@ -35,16 +35,16 @@ function ReplyModal({ msg, onClose, onSent }) {
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 block mb-1">Oggetto Email</label>
-                        <input
-                            value={subject}
+                        <input 
+                            value={subject} 
                             onChange={e => setSubject(e.target.value)}
                             className="w-full p-3 border border-lake-border rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-lake-blue"
                         />
                     </div>
                     <div>
                         <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 block mb-1">Messaggio (HTML o Testo)</label>
-                        <textarea
-                            value={html}
+                        <textarea 
+                            value={html} 
                             onChange={e => setHtml(e.target.value)}
                             rows={8}
                             placeholder="Scrivi qui la tua risposta..."
@@ -54,79 +54,14 @@ function ReplyModal({ msg, onClose, onSent }) {
                 </div>
                 <div className="p-6 border-t border-lake-border flex justify-end gap-3">
                     <button onClick={onClose} className="px-6 py-2 text-sm text-lake-ink/60">Annulla</button>
-                    <button
-                        onClick={send}
+                    <button 
+                        onClick={send} 
                         disabled={sending}
                         className="px-6 py-2 bg-lake-blue text-white rounded-sm text-sm disabled:opacity-50"
                     >
                         {sending ? "Invio..." : "Invia Email"}
                     </button>
                 </div>
-            </div>
-        </div>
-    );
-}
-
-// ─── Conversation Thread ──────────────────────────────────────────────────────
-function ConversationThread({ active }) {
-    const hasReplies = active.replies && active.replies.length > 0;
-
-    if (!hasReplies) return null;
-
-    return (
-        <div className="bg-white border border-lake-border rounded-sm shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="px-8 py-4 border-b border-lake-border bg-lake-sand/10 flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-lake-ink/40 font-bold">
-                    Conversazione
-                </span>
-                <span className="text-[10px] text-lake-ink/30">·</span>
-                <span className="text-[10px] text-lake-ink/40">
-                    {active.replies.length} {active.replies.length === 1 ? "risposta inviata" : "risposte inviate"}
-                </span>
-            </div>
-
-            {/* Thread messages */}
-            <div className="divide-y divide-lake-border/50">
-                {/* Messaggio originale dell'ospite */}
-                <div className="px-8 py-5 flex gap-4">
-                    {/* Avatar */}
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-lake-sand/60 flex items-center justify-center text-lake-ink/60 text-xs font-bold mt-0.5">
-                        {active.name?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-sm font-semibold text-lake-ink">{active.name}</span>
-                            <span className="text-[10px] text-lake-ink/40">{fmtItDateTime(active.created_at)}</span>
-                        </div>
-                        <p className="text-sm text-lake-ink/70 leading-relaxed whitespace-pre-wrap">{active.message}</p>
-                    </div>
-                </div>
-
-                {/* Risposte inviate dall'admin */}
-                {active.replies.map((reply) => (
-                    <div key={reply.id} className="px-8 py-5 flex gap-4 bg-lake-blue/[0.03]">
-                        {/* Avatar admin */}
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-lake-blue/20 flex items-center justify-center text-lake-blue text-xs font-bold mt-0.5">
-                            A
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 mb-1">
-                                <span className="text-sm font-semibold text-lake-ink">Tu (Admin)</span>
-                                <span className="text-[10px] text-lake-ink/40">{fmtItDateTime(reply.created_at)}</span>
-                            </div>
-                            {reply.subject && (
-                                <p className="text-[11px] text-lake-ink/40 mb-2 uppercase tracking-tight">
-                                    Oggetto: {reply.subject}
-                                </p>
-                            )}
-                            <div
-                                className="text-sm text-lake-ink/80 leading-relaxed prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: reply.content }}
-                            />
-                        </div>
-                    </div>
-                ))}
             </div>
         </div>
     );
@@ -142,10 +77,6 @@ export default function Inbox() {
         try {
             const r = await api.get("/admin/messages");
             setMessages(r.data);
-            if (active) {
-                const updated = r.data.find(m => m.id === active.id);
-                if (updated) setActive(updated);
-            }
         } catch (e) { toast.error("Errore caricamento messaggi"); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -157,7 +88,7 @@ export default function Inbox() {
     const deleteMsg = async (id) => {
         if (!confirm("Eliminare questo messaggio definitivamente?")) return;
         try {
-            await api.patch(`/admin/messages/${id}`, { status: "deleted" });
+            await api.patch(`/admin/messages/${id}`, { status: 'deleted' });
             toast.success("Messaggio eliminato");
             setActive(null);
             load();
@@ -178,7 +109,7 @@ export default function Inbox() {
                 {/* Sidebar Elenco */}
                 <div className="w-1/3 border border-lake-border rounded-sm bg-white overflow-y-auto">
                     {messages.map((m) => (
-                        <div
+                        <div 
                             key={m.id}
                             onClick={() => setActive(m)}
                             className={`p-5 border-b border-lake-border cursor-pointer transition-colors ${
@@ -187,7 +118,7 @@ export default function Inbox() {
                         >
                             <div className="flex justify-between items-start mb-1">
                                 <span className="text-xs font-bold text-lake-blue uppercase tracking-tighter">
-                                    {m.status === "replied" ? "✓ Risposto" : m.status}
+                                    {m.status === 'replied' ? '✓ Risposto' : m.status}
                                 </span>
                                 <span className="text-[10px] text-lake-ink/40">{fmtItDateTime(m.created_at)}</span>
                             </div>
@@ -197,11 +128,11 @@ export default function Inbox() {
                     ))}
                 </div>
 
-                {/* Dettaglio */}
-                <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-2">
+                {/* Dettaglio e Chat */}
+                <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2">
                     {active ? (
-                        <div className="space-y-5 pb-10">
-                            {/* ── Scheda Messaggio Originale (invariata) ── */}
+                        <div className="space-y-6 pb-10">
+                            {/* Scheda Messaggio Originale — identica all'originale */}
                             <div className="bg-white border border-lake-border rounded-sm p-8 shadow-sm">
                                 <div className="flex justify-between items-start mb-8">
                                     <div>
@@ -210,19 +141,19 @@ export default function Inbox() {
                                     </div>
                                     <Badge variant="outline">{active.status}</Badge>
                                 </div>
-
+                                
                                 <div className="bg-lake-cream/30 p-6 rounded-sm border border-lake-border/50 italic text-lake-ink/80 leading-relaxed">
                                     "{active.message}"
                                 </div>
 
                                 <div className="mt-8 flex gap-3 border-t border-lake-border pt-6">
-                                    <button
+                                    <button 
                                         onClick={() => setShowReply(true)}
                                         className="px-6 py-2.5 bg-lake-blue text-white rounded-sm text-sm hover:bg-lake-ink transition-all"
                                     >
                                         Rispondi ora
                                     </button>
-                                    <button
+                                    <button 
                                         onClick={() => setStatus(active.id, active.status === "replied" ? "pending" : "replied")}
                                         className="px-6 py-2.5 border border-lake-border text-lake-ink rounded-sm text-sm hover:bg-gray-50"
                                     >
@@ -234,8 +165,36 @@ export default function Inbox() {
                                 </div>
                             </div>
 
-                            {/* ── Thread Conversazione ── */}
-                            <ConversationThread active={active} />
+                            {/* CRONOLOGIA CHAT — stesso stile bubble dell'originale, visibile solo se ci sono risposte */}
+                            {active.replies && active.replies.length > 0 && (
+                                <div className="space-y-4">
+                                    <h3 className="text-[10px] uppercase tracking-[0.2em] text-lake-ink/40 font-bold px-2">Cronologia Conversazione</h3>
+
+                                    {/* Messaggio iniziale del cliente */}
+                                    <div className="flex flex-col items-start max-w-[80%]">
+                                        <div className="bg-white border border-lake-border p-4 rounded-sm rounded-bl-none shadow-sm">
+                                            <p className="text-xs font-bold text-lake-blue mb-1">{active.name}</p>
+                                            <p className="text-sm text-lake-ink">{active.message}</p>
+                                            <p className="text-[9px] text-lake-ink/40 mt-2">{fmtItDateTime(active.created_at)}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Risposte inviate dall'admin */}
+                                    {active.replies.map((reply) => (
+                                        <div key={reply.id} className="flex flex-col items-end w-full">
+                                            <div className="max-w-[80%] bg-lake-blue/5 border border-lake-blue/20 p-4 rounded-sm rounded-br-none shadow-sm">
+                                                <p className="text-xs font-bold text-lake-ink mb-1">Tu (Admin)</p>
+                                                <p className="text-[11px] text-lake-ink/40 mb-2 uppercase tracking-tight">Oggetto: {reply.subject}</p>
+                                                <div 
+                                                    className="text-sm text-lake-ink prose prose-sm max-w-none"
+                                                    dangerouslySetInnerHTML={{ __html: reply.content }}
+                                                />
+                                                <p className="text-[9px] text-lake-ink/40 mt-2 text-right">{fmtItDateTime(reply.created_at)}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center p-10 border border-dashed border-lake-border rounded-sm">
@@ -246,9 +205,9 @@ export default function Inbox() {
             </div>
 
             {showReply && active && (
-                <ReplyModal
-                    msg={active}
-                    onClose={() => setShowReply(false)}
+                <ReplyModal 
+                    msg={active} 
+                    onClose={() => setShowReply(false)} 
                     onSent={(updatedMsg) => {
                         setActive(updatedMsg);
                         setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
