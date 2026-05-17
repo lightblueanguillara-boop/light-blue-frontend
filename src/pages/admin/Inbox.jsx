@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/ui/badge";
 import { fmtItDateTime } from "../../lib/date";
-import { Trash2 } from "lucide-react"; // Icona già presente ma inutilizzata
+import { Trash2 } from "lucide-react";
 
 // ─── Reply Modal ──────────────────────────────────────────────────────────────
 function ReplyModal({ msg, onClose, onSent }) {
@@ -89,7 +89,6 @@ export default function Inbox() {
         loadMessages();
     }, [loadMessages]);
 
-    // Funzione per eliminare la chat attiva
     const deleteMessage = async (id) => {
         if (!window.confirm("Sei sicuro di voler eliminare definitivamente questa chat? Questa azione non è reversibile.")) return;
         setDeleting(true);
@@ -115,13 +114,13 @@ export default function Inbox() {
 
     return (
         <>
-            <div className="grid md:grid-cols-12 border border-lake-border bg-white rounded-sm h-[calc(100vh-220px)] shadow-sm overflow-hidden">
-                {/* LISTA MESSAGGI (COL 5) */}
-                <div className="md:col-span-5 border-r border-lake-border flex flex-col h-full bg-lake-sand/5">
-                    <div className="p-4 border-b border-lake-border bg-white">
+            <div className="grid md:grid-cols-12 border border-lake-border bg-white rounded-sm h-[calc(100vh-140px)] shadow-sm overflow-hidden">
+                {/* LISTA MESSAGGI (COL 5) - Fixato lo scroll isolato qui */}
+                <div className="md:col-span-5 border-r border-lake-border flex flex-col h-full max-h-full overflow-hidden bg-lake-sand/5">
+                    <div className="p-4 border-b border-lake-border bg-white shrink-0">
                         <h2 className="font-display text-lg text-lake-ink">Richiesta Informazioni ({messages.length})</h2>
                     </div>
-                    <div className="flex-1 overflow-y-auto divide-y divide-lake-border">
+                    <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-lake-border overscroll-contain">
                         {messages.length === 0 ? (
                             <p className="p-8 text-center text-sm italic text-lake-ink/40">Nessun messaggio ricevuto.</p>
                         ) : (
@@ -153,11 +152,11 @@ export default function Inbox() {
                 </div>
 
                 {/* VISUALIZZAZIONE CHAT / DETTAGLIO (COL 7) */}
-                <div className="md:col-span-7 flex flex-col h-full bg-white">
+                <div className="md:col-span-7 flex flex-col h-full max-h-full overflow-hidden bg-white">
                     {active ? (
-                        <div className="flex flex-col h-full">
+                        <div className="flex flex-col h-full max-h-full overflow-hidden">
                             {/* HEADER DETTAGLIO */}
-                            <div className="p-6 border-b border-lake-border flex justify-between items-start bg-lake-sand/5">
+                            <div className="p-6 border-b border-lake-border flex justify-between items-start bg-lake-sand/5 shrink-0">
                                 <div className="space-y-1 text-left">
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-display text-xl text-lake-ink">{active.name}</h3>
@@ -189,8 +188,8 @@ export default function Inbox() {
                                 </div>
                             </div>
 
-                            {/* CORPO CRONOLOGIA MESSAGGI */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-lake-cream/10 flex flex-col">
+                            {/* CORPO CRONOLOGIA MESSAGGI (Fixato il ciclo map dell'anteprima email inviata) */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-lake-cream/10 flex flex-col min-h-0 overscroll-contain">
                                 {/* Messaggio Iniziale dell'Utente */}
                                 <div className="bg-lake-sand/20 border border-lake-border/60 rounded-sm p-4 max-w-[85%] text-left self-start shadow-sm">
                                     <p className="text-[10px] uppercase tracking-widest text-lake-blue font-bold mb-1">Richiesta iniziale</p>
@@ -198,12 +197,12 @@ export default function Inbox() {
                                     <p className="text-[9px] text-lake-ink/40 mt-2 text-right">{fmtItDateTime(active.created_at)}</p>
                                 </div>
 
-                                {/* Eventuali Risposte dell'Amministratore */}
+                                {/* Cronologia delle risposte inviate da te */}
                                 {active.chat && active.chat.length > 0 && (
-                                    <div className="space-y-4 pt-4 border-t border-dashed border-lake-border">
+                                    <div className="space-y-4 pt-4 border-t border-dashed border-lake-border w-full flex flex-col">
                                         <p className="text-[10px] uppercase tracking-widest text-center text-lake-ink/40 font-bold">Cronologia risposte</p>
                                         {active.chat.map((reply) => (
-                                            <div key={reply.id} className="bg-lake-blue/5 border border-lake-blue/20 rounded-sm p-4 max-w-[85%] text-left self-end shadow-sm">
+                                            <div key={reply.id} className="bg-lake-blue/5 border border-lake-blue/20 rounded-sm p-4 max-w-[85%] text-left self-end shadow-sm w-full">
                                                 <p className="text-[10px] uppercase tracking-widest text-lake-blue font-bold mb-1">Tua risposta ({reply.subject})</p>
                                                 <div 
                                                     className="text-sm text-lake-ink prose prose-sm max-w-none"
