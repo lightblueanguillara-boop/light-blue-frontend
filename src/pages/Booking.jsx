@@ -7,7 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
 import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea"; // Assicurati di avere questo componente
+import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 import { api } from "../lib/api";
@@ -27,7 +27,8 @@ export default function Booking() {
     
     const [blocked, setBlocked] = useState([]);
     const [quote, setQuote] = useState(null);
-    const [paymentChoice] = useState("full"); // Stato fisso, non modificabile dall'utente
+    const [isRefundable, setIsRefundable] = useState(true);
+    const [paymentChoice] = useState("full");
     
     const [form, setForm] = useState({
         guest_name: "",
@@ -77,6 +78,7 @@ export default function Booking() {
                 check_in: fmt(range.from),
                 check_out: fmt(range.to),
                 payment_choice: "full",
+                is_refundable: isRefundable,
                 origin_url: window.location.origin,
             });
             window.location.href = r.data.url;
@@ -87,7 +89,9 @@ export default function Booking() {
     };
 
     const minDate = useMemo(() => new Date(), []);
-    const amount = quote ? quote.total : 0;
+    
+    // Calcola il prezzo visualizzato in base alla scelta
+    const displayPrice = quote ? (isRefundable ? quote.refundable_total : quote.non_refundable_total) : 0;
 
     return (
         <div className="bg-lake-cream min-h-screen w-full overflow-x-hidden">
@@ -152,6 +156,78 @@ export default function Booking() {
                         </div>
                     </div>
 
+                    {/* NUOVA SEZIONE: Selezione tipo tariffa */}
+                    {quote && (
+                        <div className="border-t border-lake-border pt-6 space-y-4">
+                            <p className="overline text-[10px] md:text-xs text-lake-ink/60">Scegli il tipo di tariffa</p>
+                            
+                            <div className="space-y-3">
+                                {/* Opzione Rimborsabile */}
+                                <div 
+                                    onClick={() => setIsRefundable(true)}
+                                    className={`p-4 rounded-sm border-2 cursor-pointer transition-all ${
+                                        isRefundable 
+                                            ? 'border-lake-blue bg-lake-blue/5' 
+                                            : 'border-lake-border bg-white hover:border-lake-border/70'
+                                    }`}
+                                    data-testid="rate-refundable"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                                            isRefundable 
+                                                ? 'border-lake-blue bg-lake-blue' 
+                                                : 'border-lake-border bg-white'
+                                        }`}>
+                                            {isRefundable && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-baseline justify-between">
+                                                <p className="font-bold text-lake-ink">Tariffa Rimborsabile</p>
+                                                <p className="text-lg font-display text-lake-blue font-bold">€{quote.refundable_total}</p>
+                                            </div>
+                                            <p className="text-sm text-lake-ink/70 mt-1">
+                                                Cancellazione gratuita fino a 10 giorni prima dell'arrivo
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Opzione Non Rimborsabile */}
+                                <div 
+                                    onClick={() => setIsRefundable(false)}
+                                    className={`p-4 rounded-sm border-2 cursor-pointer transition-all ${
+                                        !isRefundable 
+                                            ? 'border-lake-blue bg-lake-blue/5' 
+                                            : 'border-lake-border bg-white hover:border-lake-border/70'
+                                    }`}
+                                    data-testid="rate-non-refundable"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                                            !isRefundable 
+                                                ? 'border-lake-blue bg-lake-blue' 
+                                                : 'border-lake-border bg-white'
+                                        }`}>
+                                            {!isRefundable && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-baseline justify-between">
+                                                <p className="font-bold text-lake-ink">Tariffa Non Rimborsabile</p>
+                                                <div className="text-right">
+                                                    <p className="text-lg font-display text-lake-blue font-bold">€{quote.non_refundable_total}</p>
+                                                    <p className="text-xs text-green-600 font-bold">Risparmia {quote.discount_percent}%</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-lake-ink/70 mt-1">
+                                                Nessun rimborso in caso di cancellazione o mancata presentazione
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="border-t border-lake-border pt-6 space-y-4">
                         <p className="overline text-[10px] md:text-xs text-lake-ink/60">Riepilogo Soggiorno</p>
                         {range?.from && range?.to ? (
@@ -162,7 +238,7 @@ export default function Booking() {
                                         <div className="flex justify-between"><span>Notti:</span><span className="font-bold">{quote.nights}</span></div>
                                         <div className="flex justify-between border-t border-lake-border/40 pt-2 mt-2">
                                             <span className="text-lake-ink font-bold">Totale da pagare:</span>
-                                            <span className="text-xl font-display text-lake-blue">€{quote.total}</span>
+                                            <span className="text-xl font-display text-lake-blue">€{displayPrice}</span>
                                         </div>
                                         {!quote.available && <p className="text-red-600 text-xs mt-2 font-bold italic">Date non disponibili.</p>}
                                     </div>
@@ -180,7 +256,7 @@ export default function Booking() {
                         </label>
 
                         <button type="submit" disabled={!canSubmit || submitting} data-testid="book-submit" className="w-full py-4 rounded-sm bg-lake-blue text-white text-sm hover:bg-lake-ink transition-all disabled:opacity-50 font-bold uppercase tracking-widest shadow-sm">
-                            {submitting ? "Reindirizzamento..." : `Conferma e Paga · €${amount || ""}`}
+                            {submitting ? "Reindirizzamento..." : `Conferma e Paga · €${displayPrice || ""}`}
                         </button>
                         
                         <div className="flex flex-col items-center gap-2">
