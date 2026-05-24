@@ -16,478 +16,180 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { fmtItDate } from "../../lib/date";
 
 const statusColors = {
-    pending: "bg-amber-100 text-amber-700",
-    confirmed: "bg-emerald-100 text-emerald-700",
-    cancelled: "bg-rose-100 text-rose-700",
-    external: "bg-slate-100 text-slate-700",
-};
+    pending: \"bg-amber-100 text-amber-700\",
+    confirmed: \"bg-emerald-100 text-emerald-700\",\n    cancelled: \"bg-rose-100 text-rose-700\",\n    external: \"bg-slate-100 text-slate-700\",\n};\n\nexport default function AdminBookings() {\n    const [bookings, setBookings] = useState([]);\n    const [loading, setLoading] = useState(true);\n    const [view, setView] = useState(\"calendar\"); // calendar | list\n    const [search, setSearch] = useState(\"\");\n    const [statusFilter, setStatusFilter] = useState(\"all\");\n\n    // Modals\n    const [showAddManual, setShowAddManual] = useState(false);\n    const [activeBooking, setActiveBooking] = useState(null);\n    const [processing, setProcessing] = useState(false);\n\n    // Form manuale iniziale con il nuovo campo is_refundable\n    const [manualForm, setManualForm] = useState({\n        guest_name: \"\",\n        guest_email: \"\",\n        guest_phone: \"\",\n        check_in: \"\",\n        check_out: \"\",\n        adults: 2,\n        children: 0,\n        total_price: \"\",\n        is_refundable: \"true\", // Gestito come stringa nel componente Select\n        source: \"manual\",\n        notes: \"\"\n    });\n\n    const loadBookings = async () => {\n        setLoading(true);\n        try {\n            const r = await api.get(\"/admin/bookings\");\n            setBookings(r.data);\n        } catch {\n            toast.error(\"Errore caricamento prenotazioni\");\n        } finally {\n            setLoading(false);\n        }\n    };\n\n    useEffect(() => {\n        loadBookings();\n    }, []);\n\n    const handleAddManualSubmit = async (e) => {\n        e.preventDefault();\n        setProcessing(true);\n        try {\n            // Convertiamo is_refundable in booleano reale prima dell'invio\n            const payload = {\n                ...manualForm,\n                is_refundable: manualForm.is_refundable === \"true\"\n            };\n            await api.post(\"/admin/bookings/manual\", payload);\n            toast.success(\"Prenotazione manuale registrata con successo ✓\");\n            setShowAddManual(false);\n            // Reset del form\n            setManualForm({\n                guest_name: \"\",\n                guest_email: \"\",\n                guest_phone: \"\",\n                check_in: \"\",\n                check_out: \"\",\n                adults: 2,\n                children: 0,\n                total_price: \"\",\n                is_refundable: \"true\",\n                source: \"manual\",\n                notes: \"\"\n            });\n            loadBookings();\n        } catch (err) {\n            toast.error(err?.response?.data?.detail || \"Errore durante il salvataggio\");\n        } finally {\n            setProcessing(false);\n        }\n    };\n\n    const handleCancelBooking = async (id) => {\n        if (!confirm(\"Sicuro di voler cancellare questa prenotazione? Verrà calcolato l'eventuale rimborso.\")) return;\n        try {\n            const r = await api.post(`/admin/bookings/${encodeURIComponent(id)}/cancel`);\n            toast.success(`Prenotazione cancellata. Rimborso calcolato: €${r.data.refund_amount}`);\n            loadBookings();\n            if (activeBooking && activeBooking.id === id) setActiveBooking(null);\n        } catch (err) {\n            toast.error(err?.response?.data?.detail || \"Errore durante la cancellazione\");\n        }\n    };\n\n    const filteredBookings = useMemo(() => {\n        return bookings.filter(b => {\n            const matchesSearch = \n                b.guest_name?.toLowerCase().includes(search.toLowerCase()) ||\n                b.id?.toLowerCase().includes(search.toLowerCase()) ||\n                b.guest_email?.toLowerCase().includes(search.toLowerCase());\n            \n            const matchesStatus = statusFilter === \"all\" || b.status === statusFilter;\n            return matchesSearch && matchesStatus;\n        });\n    }, [bookings, search, statusFilter]);\n\n    // Genera i giorni occupati per il calendario\n    const modifiers = useMemo(() => {\n        const bookedDays = [];\n        bookings.forEach(b => {\n            if (b.status !== \"cancelled\") {\n                let cur = new Date(b.check_in);\n                const end = new Date(b.check_out);\n                while (cur < end) {\n                    bookedDays.push(new Date(cur));\n                    cur.setDate(cur.getDate() + 1);\n                }\n            }\n        });\n        return { booked: bookedDays };\n    }, [bookings]);\n\n    return (\n        <div className=\"space-y-6\">\n            <div className=\"flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-lake-border pb-5\">\n                <div>\n                    <h1 className=\"text-xl font-semibold text-lake-ink uppercase tracking-wider\">Prenotazioni</h1>\n                    <p className=\"text-xs text-lake-ink/60 mt-1\">Gestisci il calendario, le prenotazioni manuali e i canali sincronizzati.</p>\n                </div>\n                <Button onClick={() => setShowAddManual(true)} className=\"bg-lake-blue hover:bg-lake-ink text-white rounded-sm flex items-center gap-2 text-xs uppercase tracking-wider h-11 px-5\">\n                    <Plus className=\"w-4 h-4\" /> Nuova Prenotazione\n                </Button>\n            </div>\n\n            <div className=\"flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 border border-lake-border rounded-sm\">\n                <div className=\"flex flex-1 w-full md:max-w-md items-center gap-2 border border-lake-border rounded-sm px-3 h-10 bg-lake-cream/20\">\n                    <Search className=\"w-4 h-4 text-lake-ink/40\" />\n                    <input \n                        type=\"text\" \n                        placeholder=\"Cerca per nome, email o ID...\" \n                        value={search} \n                        onChange={e => setSearch(e.target.value)} \n                        className=\"bg-transparent text-sm outline-none w-full text-lake-ink placeholder:text-lake-ink/30\"\n                    />\n                    {search && <X className=\"w-4 h-4 text-lake-ink/40 cursor-pointer\" onClick={() => setSearch(\"\")} />}\n                </div>\n\n                <div className=\"flex w-full md:w-auto items-center gap-3\">\n                    <Select value={statusFilter} onValueChange={setStatusFilter}>\n                        <SelectTrigger className=\"w-full md:w-44 bg-transparent border-lake-border rounded-sm text-xs h-10\">\n                            <SelectValue placeholder=\"Filtra Stato\" />\n                        </SelectTrigger>\n                        <SelectContent>\n                            <SelectItem value=\"all\">Tutti gli stati</SelectItem>\n                            <SelectItem value=\"confirmed\">Confermate</SelectItem>\n                            <SelectItem value=\"pending\">In Attesa</SelectItem>\n                            <SelectItem value=\"cancelled\">Cancellate</SelectItem>\n                            <SelectItem value=\"external\">Canali Esterni (iCal)</SelectItem>\n                        </SelectContent>\n                    </Select>\n\n                    <div className=\"flex border border-lake-border rounded-sm p-0.5 bg-lake-cream/20 shrink-0\">\n                        <button onClick={() => setView(\"calendar\")} className={`px-3 py-1.5 rounded-sm text-xs flex items-center gap-1.5 transition-all ${view === \"calendar\" ? \"bg-white text-lake-blue shadow-sm font-medium\" : \"text-lake-ink/60 hover:text-lake-ink\"}`}>\n                            <CalendarIcon className=\"w-3.5 h-3.5\" /> Calendario\n                        </button>\n                        <button onClick={() => setView(\"list\")} className={`px-3 py-1.5 rounded-sm text-xs flex items-center gap-1.5 transition-all ${view === \"list\" ? \"bg-white text-lake-blue shadow-sm font-medium\" : \"text-lake-ink/60 hover:text-lake-ink\"}`}>\n                            <List className=\"w-3.5 h-3.5\" /> Lista\n                        </button>\n                    </div>\n                </div>\n            </div>\n\n            <div className=\"grid grid-cols-1 xl:grid-cols-3 gap-6 items-start\">\n                <div className=\"xl:col-span-2 bg-white border border-lake-border rounded-sm p-4\">\n                    {loading ? (\n                        <div className=\"p-10 text-center text-xs text-lake-ink/40 italic\">Caricamento dati in corso...</div>\n                    ) : view === \"calendar\" ? (\n                        <div className=\"flex justify-center p-2 admin-daypicker\">\n                            <DayPicker \n                                locale={it} \n                                mode=\"multiple\"\n                                modifiers={modifiers}\n                                modifiersStyles={{\n                                    booked: { backgroundColor: '#7A93AC', color: 'white', borderRadius: '0px' }\n                                }}\n                                styles={{\n                                    caption: { color: '#1C242C', fontFamily: 'monospace', fontSize: '14px' }\n                                }}\n                            />\n                        </div>\n                    ) : (\n                        <div className=\"overflow-x-auto\">\n                            <Table>\n                                <TableHeader className=\"bg-lake-cream/30\">\n                                    <TableRow>\n                                        <TableHead className=\"text-[10px] uppercase tracking-wider text-lake-ink/70 font-semibold\">Ospite</TableHead>\n                                        <TableHead className=\"text-[10px] uppercase tracking-wider text-lake-ink/70 font-semibold\">Soggiorno</TableHead>\n                                        <TableHead className=\"text-[10px] uppercase tracking-wider text-lake-ink/70 font-semibold\">Stato</TableHead>\n                                        <TableHead className=\"text-[10px] uppercase tracking-wider text-lake-ink/70 font-semibold text-right\">Prezzo</TableHead>\n                                    </TableRow>\n                                </TableHeader>\n                                <TableBody>\n                                    {filteredBookings.length === 0 ? (\n                                        <TableRow>\n                                            <TableCell colSpan={4} className=\"text-center py-8 text-xs text-lake-ink/40 italic\">Nessuna prenotazione trovata.</TableCell>\n                                        </TableRow>\n                                    ) : (\n                                        filteredBookings.map((b) => (\n                                            <TableRow key={b.id} className=\"cursor-pointer hover:bg-lake-cream/10 transition-all\" onClick={() => setActiveBooking(b)}>\n                                                <TableCell className=\"py-3.5\">\n                                                    <div className=\"font-medium text-sm text-lake-ink\">{b.guest_name || \"Blocco Esterno\"}</div>\n                                                    <div className=\"text-[11px] text-lake-ink/50 mt-0.5\">{b.source.toUpperCase()} · id: {b.id.substring(0,8)}...</div>\n                                                </TableCell>\n                                                <TableCell className=\"py-3.5\">\n                                                    <div className=\"text-xs text-lake-ink font-mono\">{fmtItDate(b.check_in)} ➔ {fmtItDate(b.check_out)}</div>\n                                                </TableCell>\n                                                <TableCell className=\"py-3.5\">\n                                                    <Badge className={`rounded-sm font-normal text-[10px] uppercase tracking-wider px-2 py-0.5 border-none shadow-none ${statusColors[b.status] || \"bg-slate-100\"}`}>\n                                                        {b.status === \"external\" ? b.notes || \"iCal\" : b.status}\n                                                    </Badge>\n                                                </TableCell>\n                                                <TableCell className=\"py-3.5 text-right font-medium text-sm text-lake-ink\">\n                                                    {b.total_price > 0 ? `€${Number(b.total_price).toFixed(2)}` : \"—\"}\n                                                </TableCell>\n                                            </TableRow>\n                                        ))\n                                    )}\n                                </TableBody>\n                            </Table>\n                        </div>\n                    )}\n                </div>\n\n                <div className=\"bg-white border border-lake-border rounded-sm p-5 space-y-5 sticky top-6\">\n                    <h3 className=\"text-xs font-semibold text-lake-ink/40 uppercase tracking-widest pb-2 border-b border-lake-border\">Dettaglio Selezione</h3>\n                    {activeBooking ? (\n                        <div className=\"space-y-4 text-lake-ink\">\n                            <div>\n                                <p className=\"text-[10px] uppercase tracking-wider text-lake-ink/40 font-mono\">ID Prenotazione</p>\n                                <p className=\"text-xs font-mono break-all bg-lake-cream/30 p-2 rounded-sm border border-lake-border/50 mt-1\">{activeBooking.id}</p>\n                            </div>\n                            <div className=\"grid grid-cols-2 gap-4\">\n                                <div>\n                                    <p className=\"text-[10px] uppercase tracking-wider text-lake-ink/40\">Check-in</p>\n                                    <p className=\"text-sm font-semibold mt-0.5 font-mono text-lake-blue\">{fmtItDate(activeBooking.check_in)}</p>\n                                </div>\n                                <div>\n                                    <p className=\"text-[10px] uppercase tracking-wider text-lake-ink/40\">Check-out</p>\n                                    <p className=\"text-sm font-semibold mt-0.5 font-mono text-lake-blue\">{fmtItDate(activeBooking.check_out)}</p>\n                                </div>\n                            </div>\n                            <div className=\"border-t border-lake-border/60 pt-3 space-y-2\">\n                                <div className=\"flex justify-between text-xs\">\n                                    <span className=\"text-lake-ink/60\">Ospite:</span>\n                                    <span className=\"font-medium\">{activeBooking.guest_name || \"—\"}</span>\n                                </div>\n                                {activeBooking.guest_email && (\n                                    <div className=\"flex justify-between text-xs\">\n                                        <span className=\"text-lake-ink/60\">Email:</span>\n                                        <span className=\"font-mono text-lake-blue\">{activeBooking.guest_email}</span>\n                                    </div>\n                                )}\n                                {activeBooking.guest_phone && (\n                                    <div className=\"flex justify-between text-xs\">\n                                        <span className=\"text-lake-ink/60\">Telefono:</span>\n                                        <span>{activeBooking.guest_phone}</span>\n                                    </div>\n                                )}\n                                <div className=\"flex justify-between text-xs\">\n                                    <span className=\"text-lake-ink/60\">Canale d'origine:</span>\n                                    <Badge variant=\"outline\" className=\"rounded-sm text-[10px] uppercase font-normal px-1.5 border-lake-border\">{activeBooking.source}</Badge>\n                                </div>\n                                <div className=\"flex justify-between text-xs\">\n                                    <span className=\"text-lake-ink/60\">Tariffazione:</span>\n                                    <Badge variant=\"outline\" className={`rounded-sm text-[10px] uppercase font-normal px-1.5 ${activeBooking.is_refundable ? \"border-emerald-200 bg-emerald-50 text-emerald-700\" : \"border-rose-200 bg-rose-50 text-rose-700\"}`}>\n                                        {activeBooking.is_refundable ? \"Rimborsabile (10d)\" : \"Non Rimborsabile\"}\n                                    </Badge>\n                                </div>\n                            </div>\n\n                            <div className=\"border-t border-lake-border/60 pt-3 space-y-1.5 bg-lake-cream/10 p-3 rounded-sm border border-lake-border/40\">\n                                <div className=\"flex justify-between text-xs\">\n                                    <span className=\"text-lake-ink/60\">Prezzo Totale:</span>\n                                    <span className=\"font-semibold\">€{Number(activeBooking.total_price).toFixed(2)}</span>\n                                </div>\n                                <div className=\"flex justify-between text-xs\">\n                                    <span className=\"text-lake-ink/60\">Acconto Richiesto:</span>\n                                    <span>€{Number(activeBooking.deposit_amount).toFixed(2)}</span>\n                                </div>\n                                <div className=\"flex justify-between text-xs border-t border-dashed border-lake-border/50 pt-1.5 mt-1\">\n                                    <span className=\"text-lake-ink/60\">Stato Pagamento:</span>\n                                    <span className=\"font-medium uppercase text-[11px] font-mono\">{activeBooking.payment_status}</span>\n                                </div>\n                                {activeBooking.refund_amount > 0 && (\n                                    <div className=\"flex justify-between text-xs text-rose-600 font-medium\">\n                                        <span>Rimborsato:</span>\n                                        <span>€{Number(activeBooking.refund_amount).toFixed(2)}</span>\n                                    </div>\n                                )}\n                            </div>\n\n                            {activeBooking.notes && (\n                                <div className=\"bg-lake-cream/30 border border-lake-border/60 p-2.5 rounded-sm\">\n                                    <p className=\"text-[10px] uppercase tracking-wider text-lake-ink/40 font-semibold\">Note interne</p>\n                                    <p className=\"text-xs text-lake-ink/80 mt-1 leading-relaxed whitespace-pre-line\">{activeBooking.notes}</p>\n                                </div>\n                            )}\n\n                            {activeBooking.status !== \"cancelled\" && activeBooking.source !== \"external\" && (\n                                <div className=\"pt-2\">\n                                    <Button \n                                        onClick={() => handleCancelBooking(activeBooking.id)} \n                                        className=\"w-full bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-sm text-xs uppercase tracking-wider h-10 font-medium flex items-center justify-center gap-1.5 shadow-none\"\n                                    >\n                                        <Trash2 className=\"w-3.5 h-3.5\" /> Cancella Prenotazione\n                                    </Button>\n                                </div>\n                            )}\n                        </div>\n                    ) : (\n                        <div className=\"text-center py-12 border border-dashed border-lake-border rounded-sm bg-lake-cream/5\">\n                            <Info className=\"w-5 h-5 text-lake-ink/20 mx-auto mb-2\" />\n                            <p className=\"text-xs text-lake-ink/40 italic font-light px-4\">Seleziona una prenotazione dalla lista o naviga nel calendario per visualizzare i dettagli completi dell'ospite.</p>\n                        </div>\n                    )}\n                </div>\n            </div>\n\n            {/* Modal di Creazione Prenotazione Manuale */}\n            <Dialog open={showAddManual} onOpenChange={setShowAddManual}>\n                <DialogContent className=\"bg-white rounded-sm border border-lake-border max-w-md w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]\">\n                    <DialogHeader className=\"border-b border-lake-border pb-3\">\n                        <DialogTitle className=\"text-sm uppercase tracking-wider text-lake-ink font-semibold flex items-center gap-2\">\n                            <Plus className=\"w-4 h-4 text-lake-blue\" /> Nuova Prenotazione Manuale\n                        </DialogTitle>\n                        <DialogDescription className=\"text-[11px] text-lake-ink/50\">\n                            Inserisci un blocco manuale o una prenotazione diretta/telefonica nel sistema.\n                        </DialogDescription>\n                    </DialogHeader>\n                    <form onSubmit={handleAddManualSubmit} className=\"space-y-4 pt-3 text-lake-ink\">\n                        <div className=\"grid gap-1.5\">\n                            <Label className=\"text-xs\">Nome Completo Ospite</Label>\n                            <Input required value={manualForm.guest_name} onChange={e => setManualForm({ ...manualForm, guest_name: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm\" placeholder=\"Es: Mario Rossi\" />\n                        </div>\n                        <div className=\"grid grid-cols-2 gap-4\">\n                            <div className=\"grid gap-1.5\">\n                                <Label className=\"text-xs\">Email</Label>\n                                <Input type=\"email\" required value={manualForm.guest_email} onChange={e => setManualForm({ ...manualForm, guest_email: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm\" placeholder=\"mario@esempio.com\" />\n                            </div>\n                            <div className=\"grid gap-1.5\">\n                                <Label className=\"text-xs\">Telefono</Label>\n                                <Input type=\"tel\" value={manualForm.guest_phone} onChange={e => setManualForm({ ...manualForm, guest_phone: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm\" placeholder=\"+39 333...\" />\n                            </div>\n                        </div>\n                        <div className=\"grid grid-cols-2 gap-4\">\n                            <div className=\"grid gap-1.5\">\n                                <Label className=\"text-xs\">Check-in</Label>\n                                <Input type=\"date\" required value={manualForm.check_in} onChange={e => setManualForm({ ...manualForm, check_in: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm font-mono\" />\n                            </div>\n                            <div className=\"grid gap-1.5\">\n                                <Label className=\"text-xs\">Check-out</Label>\n                                <Input type=\"date\" required value={manualForm.check_out} onChange={e => setManualForm({ ...manualForm, check_out: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm font-mono\" />\n                            </div>\n                        </div>\n                        <div className=\"grid grid-cols-2 gap-4\">\n                            <div className=\"grid gap-1.5\">\n                                <Label className=\"text-xs\">Adulti</Label>\n                                <Input type=\"number\" min=\"1\" required value={manualForm.adults} onChange={e => setManualForm({ ...manualForm, adults: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm\" />\n                            </div>\n                            <div className=\"grid gap-1.5\">\n                                <Label className=\"text-xs\">Bambini</Label>\n                                <Input type=\"number\" min=\"0\" required value={manualForm.children} onChange={e => setManualForm({ ...manualForm, children: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm\" />\n                            </div>\n                        </div>\n                        <div className=\"grid gap-1.5\">\n                            <Label className=\"text-xs\">Prezzo Totale Accurato (€)</Label>\n                            <Input required type=\"number\" step=\"0.01\" value={manualForm.total_price} onChange={e => setManualForm({ ...manualForm, total_price: e.target.value })} className=\"rounded-sm border-lake-border h-10 text-sm font-mono\" placeholder=\"0.00\" />\n                        </div>\n                        \n                        {/* NUOVO SELETTORE GRAFICO PER LA TARIFFAZIONE MANUALE */}\n                        <div className=\"grid gap-1.5\">\n                            <Label className=\"text-xs\">Politica di Cancellazione / Tariffa</Label>\n                            <Select \n                                value={manualForm.is_refundable} \n                                onValueChange={(val) => setManualForm({ ...manualForm, is_refundable: val })}\n                            >\n                                <SelectTrigger className=\"w-full border-lake-border rounded-sm text-sm h-10 bg-white\">\n                                    <SelectValue placeholder=\"Seleziona tipo tariffa\" />\n                                </SelectTrigger>\n                                <SelectContent className=\"bg-white border border-lake-border\">\n                                    <SelectItem value=\"true\" className=\"text-sm cursor-pointer\">Rimborsabile (Rimborso 100% fino a 10 giorni prima)</SelectItem>\n                                    <SelectItem value=\"false\" className=\"text-sm cursor-pointer\">Non Rimborsabile (Nessun rimborso sempre)</SelectItem>\n                                </SelectContent>\n                            </Select>\n                        </div>\n\n                        <div className=\"grid gap-1.5\">\n                            <Label className=\"text-xs\">Note Interne / Dettagli accordo</Label>\n                            <textarea value={manualForm.notes} onChange={e => setManualForm({ ...manualForm, notes: e.target.value })} className=\"rounded-sm border border-lake-border text-sm p-2.5 min-h-[60px] outline-none\" placeholder=\"Inserisci qui eventuali dettagli sulla prenotazione...\" />\n                        </div>\n                        <DialogFooter className=\"pt-2 border-t border-lake-border mt-4\">\n                            <Button type=\"submit\" disabled={processing} className=\"w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm h-11 text-xs uppercase tracking-widest font-bold\">\n                                {processing ? \"Salvataggio...\" : \"Salva e Invia Email\"}\n                            </Button>\n                        </DialogFooter>\n                    </form>\n                </DialogContent>\n            </Dialog>\n        </div>\n    );\n}\n```
 
-export default function AdminBookings() {
-    const [items, setItems] = useState([]);
-    const [search, setSearch] = useState("");
-    const [filterStatus, setFilterStatus] = useState("all");
-    const [filterPayment, setFilterPayment] = useState("all");
-    const [filterSource, setFilterSource] = useState("all");
+---
 
-    const [manualOpen, setManualOpen] = useState(false);
-    const [detailOpen, setDetailOpen] = useState(false);
-    const [selectedBooking, setSelectedBooking] = useState(null);
-    const [processing, setProcessing] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+### 📂 2. BACKEND: `light_blue_anguillara-main/routers/admin/bookings.py`
+Nel backend abbiamo intercettato il valore booleano `is_refundable` inviato dal corpo della richiesta (se assente, impostiamo `True` come comportamento sicuro di ripiego), salvandolo direttamente nel dizionario che viene scritto su MongoDB.
 
-    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-    const [bookingToCancel, setBookingToCancel] = useState(null);
-    const [cancelling, setCancelling] = useState(false);
+```python
+"""Bookings CRUD + refund + balance-reminder."""
+import asyncio
+import logging
+import uuid
+import urllib.parse
+from datetime import datetime, timezone
+from typing import Optional
 
-    const [manualForm, setManualForm] = useState({
-        guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale"
-    });
+import stripe
+from fastapi import APIRouter, Depends, HTTPException
 
-    const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
-    useEffect(() => { load(); }, []);
+from auth import get_current_admin
+from db import db, get_settings, STRIPE_API_KEY
+from email_helpers import (
+    send_email_async, 
+    email_balance_reminder_html, 
+    email_booking_confirmation_html, 
+    email_cancellation_html,
+    email_modification_confirmation_html,
+    _it_date
+)
+from models import Booking, BookingUpdate, RefundRequest
+from pricing import compute_refund_amount
 
-    const activeItems = useMemo(() => {
-        return items.filter((b) => b.status !== "cancelled").filter((b) => {
-            const searchTerm = search.toLowerCase();
-            
-            const guestName = b.guest_name ? b.guest_name.toLowerCase() : "";
-            const guestEmail = b.guest_email ? b.guest_email.toLowerCase() : "";
-            const bookingId = b.id ? b.id.toString() : "";
-            
-            const matchesSearch = guestName.includes(searchTerm) || 
-                                  guestEmail.includes(searchTerm) || 
-                                  bookingId.includes(searchTerm);
+router = APIRouter()
+stripe.api_key = STRIPE_API_KEY
 
-            let matchesStatus = true;
-            if (filterStatus !== "all") {
-                if (filterStatus === "external") {
-                    matchesStatus = b.source === "airbnb" || b.source === "booking";
-                } else {
-                    matchesStatus = b.status === filterStatus;
-                }
-            }
+@router.get("/admin/bookings")
+async def list_bookings(admin=Depends(get_current_admin)):
+    return await db.bookings.find({}, {'_id': 0}).sort('created_at', -1).to_list(10000)
 
-            const matchesPayment = filterPayment === "all" || b.payment_status === filterPayment;
-            
-            let matchesSource = true;
-            if (filterSource !== "all") {
-                if (filterSource === "external") {
-                    matchesSource = b.source === "airbnb" || b.source === "booking" || b.source === "external";
-                } else {
-                    matchesSource = b.source === filterSource;
-                }
-            }
+@router.post("/admin/bookings/manual")
+async def create_manual_booking(payload: dict, admin=Depends(get_current_admin)):
+    """Crea una prenotazione manuale e invia email di conferma all'ospite."""
+    try:
+        total_price = float(payload.get('total_price', 0))
+        deposit_amount = float(payload.get('deposit_amount', 0))
 
-            return matchesSearch && matchesStatus && matchesPayment && matchesSource;
-        });
-    }, [items, search, filterStatus, filterPayment, filterSource]);
+        # Estrazione degli ospiti dal payload inviato dal front-end
+        adults = int(payload.get('adults', 2))
+        children = int(payload.get('children', 0))
 
-    const archivedItems = useMemo(() => {
-        return items.filter((b) => b.status === "cancelled").filter((b) => {
-            const searchTerm = search.toLowerCase();
-            const guestName = b.guest_name ? b.guest_name.toLowerCase() : "";
-            const guestEmail = b.guest_email ? b.guest_email.toLowerCase() : "";
-            const bookingId = b.id ? b.id.toString() : "";
+        # ESTRAZIONE DEL NUOVO CAMPO IS_REFUNDABLE DALLE IMPOSTAZIONI MANUALI
+        is_refundable = bool(payload.get('is_refundable', True))
 
-            return guestName.includes(searchTerm) || 
-                   guestEmail.includes(searchTerm) || 
-                   bookingId.includes(searchTerm);
-        });
-    }, [items, search]);
+        settings = await get_settings()
 
-    const bookedDates = useMemo(() => {
-        const dates = [];
-        items.filter(b => b.status !== "cancelled").forEach(b => {
-            let current = new Date(b.check_in);
-            const end = new Date(b.check_out);
-            while (current < end) {
-                dates.push(new Date(current));
-                current.setDate(current.getDate() + 1);
-            }
-        });
-        return dates;
-    }, [items]);
+        # Se l'acconto non è esplicitamente calcolato, usa la percentuale dei settings
+        if deposit_amount <= 0:
+            dep_pct = float(settings.get('deposit_percent', 30.0))
+            deposit_amount = round((total_price * dep_pct) / 100.0, 2)
 
-    const update = async (id, patch) => {
-        try {
-            await api.patch(`/admin/bookings/${id}`, patch);
-            toast.success("Aggiornato");
-            load();
-        } catch { toast.error("Errore durante l'aggiornamento"); }
-    };
-
-    const askCancel = (b) => {
-        setBookingToCancel(b);
-        setCancelDialogOpen(true);
-    };
-
-    const confirmCancel = async () => {
-        if (!bookingToCancel) return;
-        setCancelling(true);
-        try {
-            const res = await api.delete(`/admin/bookings/${bookingToCancel.id}`);
-            if (res.data?.email_sent) {
-                toast.success("Prenotazione archiviata. Email di cancellazione inviata all'ospite.");
-            } else {
-                toast.success("Prenotazione archiviata. Nessuna email inviata (ospite senza indirizzo email).");
-            }
-            setCancelDialogOpen(false);
-            setBookingToCancel(null);
-            load();
-        } catch {
-            toast.error("Errore durante la cancellazione");
-        } finally {
-            setCancelling(false);
+        new_booking = {
+            "id": f"bk_{uuid.uuid4().hex[:12]}",
+            "guest_name": payload.get('guest_name', 'Blocco Manuale'),
+            "guest_email": payload.get('guest_email', 'admin@lightblue.it'),
+            "guest_phone": payload.get('guest_phone'),
+            "check_in": payload.get('check_in'),
+            "check_out": payload.get('check_out'),
+            "adults": adults,
+            "children": children,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "payment_choice": "deposit",
+            "is_refundable": is_refundable, # Salva la scelta impostata manualmente dall'admin
+            "status": "confirmed",
+            "payment_status": "unpaid",
+            "source": payload.get('source', 'manual'),
+            "notes": payload.get('notes', ''),
+            "consent_newsletter": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
-    };
 
-    const handleManualSubmit = async (e) => {
-        e.preventDefault();
-        setProcessing(true);
-        setErrorMessage("");
-        try {
-            const priceAsNumber = parseFloat(manualForm.total_price) || 0;
-            const payload = { 
-                ...manualForm, 
-                total_price: priceAsNumber,
-                adults: parseInt(manualForm.adults),
-                children: parseInt(manualForm.children)
-            };
-            if (manualForm.id) {
-                await api.patch(`/admin/bookings/${manualForm.id}`, payload);
-                toast.success("Modificata con successo");
-            } else {
-                await api.post("/admin/bookings/manual", {
-                    ...payload,
-                    id: `man-${Date.now()}`,
-                    status: "confirmed",
-                    payment_status: "fully_paid",
-                    source: "manual",
-                    created_at: new Date().toISOString()
-                });
-                toast.success("Registrata con successo");
-            }
-            setManualOpen(false);
-            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" });
-            load();
-        } catch (err) { 
-            const msg = err?.response?.data?.detail || "Errore nel salvataggio";
-            setErrorMessage(msg);
-            toast.error(msg);
-        } finally { setProcessing(false); }
-    };
+        await db.bookings.insert_one(new_booking)
 
-    const openEdit = (b) => {
-        setErrorMessage("");
-        setManualForm({ 
-            id: b.id, 
-            guest_name: b.guest_name || "", 
-            guest_email: b.guest_email || "", 
-            guest_phone: b.guest_phone || "", 
-            check_in: b.check_in || "", 
-            check_out: b.check_out || "", 
-            total_price: String(b.total_price || 0), 
-            adults: b.adults || 2,
-            children: b.children || 0,
-            notes: b.notes || "" 
-        });
-        setManualOpen(true);
-    };
+        # Rimuove l'identificatore MongoDB interno per la risposta ed evitare conflitti
+        if '_id' in new_booking:
+            del new_booking['_id']
 
-    const openDetail = (b) => {
-        setSelectedBooking(b);
-        setDetailOpen(true);
-    };
+        # Invio asincrono dell'email di conferma allineato alla scelta rimborsabile/non rimborsabile
+        asyncio.create_task(
+            send_email_async(
+                new_booking['guest_email'],
+                f"Conferma Prenotazione — {settings.get('villa_name','Light Blue')}",
+                email_booking_confirmation_html(new_booking, settings)
+            )
+        )
 
-    const BookingsTable = ({ rows, showActions = true }) => (
-        <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
-                        <TableHead>Ospite</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Importo</TableHead>
-                        <TableHead>Stato Prenotazione</TableHead>
-                        <TableHead>Stato Pagamento</TableHead>
-                        <TableHead>Fonte</TableHead>
-                        {showActions && <TableHead className="text-right">Azioni</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {rows.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={showActions ? 7 : 6} className="text-center py-12 text-lake-ink/40 text-sm italic">
-                                Nessuna prenotazione trovata
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    {rows.map((b) => (
-                        <TableRow key={b.id} className="hover:bg-slate-50/50 transition-colors">
-                            <TableCell>
-                                <button onClick={() => openDetail(b)} className="text-left group flex flex-col">
-                                    <div className="flex items-center gap-1">
-                                        <span className="font-bold text-lake-ink group-hover:text-lake-blue transition-colors underline decoration-dotted underline-offset-4 tracking-tight">
-                                            {b.guest_name}
-                                        </span>
-                                        <Info className="w-3 h-3 text-lake-ink/20 group-hover:text-lake-blue" />
-                                    </div>
-                                    <span className="text-[10px] text-lake-ink/50 uppercase">{b.guest_email}</span>
-                                </button>
-                            </TableCell>
-                            <TableCell className="text-sm font-medium whitespace-nowrap italic text-slate-600 tracking-tight">
-                                {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
-                            </TableCell>
-                            <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
+        return new_booking
 
-                            <TableCell>
-                                {showActions ? (
-                                    <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
-                                        <SelectTrigger className="w-32 h-8 text-[11px] font-semibold"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pending">In attesa</SelectItem>
-                                            <SelectItem value="confirmed">Confermata</SelectItem>
-                                            <SelectItem value="cancelled">Cancellata</SelectItem>
-                                            <SelectItem value="external">Esterna</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                ) : (
-                                    <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold`}>
-                                        Cancellata
-                                    </Badge>
-                                )}
-                            </TableCell>
+    except Exception as e:
+        logging.exception("Error creating manual booking")
+        raise HTTPException(status_code=400, detail=f"Errore creazione prenotazione: {str(e)}")
 
-                            <TableCell>
-                                <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
-                                    <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
-                                        <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold w-full justify-center`}>
-                                            {b.payment_status}
-                                        </Badge>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="unpaid">Non pagato</SelectItem>
-                                        <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
-                                        <SelectItem value="fully_paid">Saldato</SelectItem>
-                                        <SelectItem value="refunded">Rimborsato</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </TableCell>
+@router.post("/admin/bookings/{booking_id}/cancel")
+async def admin_cancel_booking(booking_id: str, admin=Depends(get_current_admin)):
+    """Cancella una prenotazione lato amministratore calcolando il rimborso esatto."""
+    decoded_id = urllib.parse.unquote(booking_id)
 
-                            <TableCell className="text-[10px] uppercase font-black text-lake-ink/40 tracking-widest">{b.source}</TableCell>
+    b = await db.bookings.find_one({'id': decoded_id})
+    if not b:
+        raise HTTPException(404, 'Booking not found')
 
-                            {showActions && (
-                                <TableCell className="text-right">
-                                    <div className="flex flex-col items-end gap-1 text-[11px]">
-                                        <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
-                                            <Pencil className="w-3 h-3" /> MODIFICA
-                                        </button>
-                                        <button onClick={() => askCancel(b)} className="text-red-500 hover:underline font-bold uppercase tracking-tighter flex items-center gap-1">
-                                            <Trash2 className="w-3 h-3" /> ELIMINA
-                                        </button>
-                                    </div>
-                                </TableCell>
-                            )}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
-    );
+    if b.get('status') == 'cancelled':
+        return {'ok': True, 'refund_amount': b.get('refund_amount', 0.0), 'msg': 'Already cancelled'}
 
-    return (
-        <div className="p-10" data-testid="admin-bookings-page">
-            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
-                <div>
-                    <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
-                    <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
-                </div>
-                <Button onClick={() => { setErrorMessage(""); setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale" }); setManualOpen(true); }} className="bg-lake-blue hover:bg-lake-blue/90">
-                    <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
-                </Button>
-            </div>
+    # Calcolo dinamico del rimborso basato sulla regola dei 10 giorni o Tariffa Non Rimborsabile
+    ref_res = compute_refund_amount(b)
+    refund_amount = ref_res.get('refund', 0.0)
 
-            <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
-                <div className="relative flex-1 min-w-[250px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
-                    <Input placeholder="Cerca per nome, email o ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10" />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Stato" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tutti gli stati</SelectItem>
-                            <SelectItem value="pending">In attesa</SelectItem>
-                            <SelectItem value="confirmed">Confermate</SelectItem>
-                            <SelectItem value="external">Esterne (Airbnb/Booking)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select value={filterPayment} onValueChange={setFilterPayment}>
-                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Pagamento" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tutti i pagamenti</SelectItem>
-                            <SelectItem value="unpaid">Non pagato</SelectItem>
-                            <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
-                            <SelectItem value="fully_paid">Saldato</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select value={filterSource} onValueChange={setFilterSource}>
-                        <SelectTrigger className="w-32 text-xs h-10"><SelectValue placeholder="Fonte" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tutte le fonti</SelectItem>
-                            <SelectItem value="website">Sito Web</SelectItem>
-                            <SelectItem value="manual">Manuale</SelectItem>
-                            <SelectItem value="external">Esterne (Sync)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
+    # Se c'era un pagamento Stripe registrato ed è previsto un rimborso monetario, procedi via API Stripe
+    pi = b.get('payment_intent_id')
+    if pi and refund_amount > 0:
+        try:
+            stripe.Refund.create(
+                payment_intent=pi,
+                amount=int(refund_amount * 100),
+                reason='requested_by_customer',
+            )
+        except Exception as e:
+            logging.exception('Stripe refund failed')
+            raise HTTPException(500, f'Rimborso Stripe fallito ma registrato localmente: {e}')
 
-            <Tabs defaultValue="list" className="w-full">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
-                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
-                    <TabsTrigger value="archive">
-                        <Archive className="mr-2 h-4 w-4" /> Archivio
-                        {archivedItems.length > 0 && (
-                            <span className="ml-2 bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                                {archivedItems.length}
-                            </span>
-                        )}
-                    </TabsTrigger>
-                </TabsList>
+    await db.bookings.update_one(
+        {'id': decoded_id},
+        {'$set': {
+            'status': 'cancelled',
+            'payment_status': 'refunded' if refund_amount > 0 else b.get('payment_status', 'unpaid'),
+            'refund_amount': refund_amount,
+            'refund_at': datetime.now(timezone.utc).isoformat(),
+        }},
+    )
 
-                <TabsContent value="list">
-                    <BookingsTable rows={activeItems} showActions={true} />
-                </TabsContent>
+    # Invia email di notifica cancellazione all'ospite
+    settings = await get_settings()
+    b['status'] = 'cancelled'
+    b['refund_amount'] = refund_amount
+    asyncio.create_task(
+        send_email_async(
+            b['guest_email'],
+            f"Annullamento Prenotazione — {settings.get('villa_name','Light Blue')}",
+            email_cancellation_html(b, settings)
+        )
+    )
 
-                <TabsContent value="calendar" className="bg-white border border-lake-border rounded-sm p-10 flex justify-center">
-                    <DayPicker mode="multiple" locale={it} modifiers={{ booked: bookedDates }} modifiersStyles={{ booked: { backgroundColor: "#ef4444", color: "white", borderRadius: 0 } }} numberOfMonths={3} className="admin-calendar" />
-                </TabsContent>
+    return {'ok': True, 'refund_amount': refund_amount}
 
-                <TabsContent value="archive">
-                    <div className="mb-4 flex items-center gap-2 text-sm text-lake-ink/60">
-                        <Archive className="w-4 h-4" />
-                        <span>Le prenotazioni cancellate vengono conservate per storico. Il rimborso va gestito manualmente su Stripe.</span>
-                    </div>
-                    <BookingsTable rows={archivedItems} showActions={false} />
-                </TabsContent>
-            </Tabs>
+@router.post("/admin/bookings/{booking_id}/balance-reminder")
+async def balance_reminder(booking_id: str, admin=Depends(get_current_admin)):
+    decoded_id = urllib.parse.unquote(booking_id)
 
-            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-                <DialogContent className="sm:max-w-[440px] border-t-4 border-t-rose-400">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-display text-lake-ink flex items-center gap-2">
-                            <Trash2 className="w-5 h-5 text-rose-500" /> Cancella prenotazione
-                        </DialogTitle>
-                        <DialogDescription className="pt-2 space-y-1">
-                            {bookingToCancel && (
-                                <>
-                                    <span className="block font-semibold text-lake-ink">{bookingToCancel.guest_name}</span>
-                                    <span className="block text-sm">{fmtItDate(bookingToCancel.check_in)} → {fmtItDate(bookingToCancel.check_out)}</span>
-                                </>
-                            )}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-2 space-y-3 text-sm text-lake-ink/80">
-                        <p>La prenotazione verrà <strong>archiviata</strong> e all'ospite verrà inviata un'email di cancellazione con indicazione che il rimborso arriverà entro <strong>5 giorni lavorativi</strong>.</p>
-                        <p className="text-xs text-lake-ink/50">Il rimborso effettivo su Stripe deve essere eseguito manualmente dal pannello Stripe.</p>
-                    </div>
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setCancelDialogOpen(false)} disabled={cancelling}>
-                            Annulla
-                        </Button>
-                        <Button onClick={confirmCancel} disabled={cancelling} className="bg-rose-500 hover:bg-rose-600 text-white">
-                            {cancelling ? "Cancellazione..." : "Sì, cancella e notifica"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+    b = await db.bookings.find_one({'id': decoded_id}, {'_id': 0})
+    if not b:
+        raise HTTPException(404, 'Booking not found')
 
-            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-display text-lake-ink">Scheda Dettagliata</DialogTitle>
-                        <DialogDescription>Informazioni complete sulla prenotazione e dati tecnici.</DialogDescription>
-                    </DialogHeader>
-                    {selectedBooking && (
-                        <div className="space-y-6 py-4">
-                            <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                                <div className="space-y-1">
-                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Users className="w-3 h-3" /> Ospite</Label>
-                                    <p className="font-bold text-lg text-lake-ink leading-tight">{selectedBooking.guest_name}</p>
-                                    <div className="flex flex-col gap-0.5 mt-1">
-                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedBooking.guest_email}</span>
-                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedBooking.guest_phone || "N/A"}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Ospiti / Fonte</Label>
-                                    <p className="font-bold text-xl text-lake-ink">{selectedBooking.adults + selectedBooking.children} Persone</p>
-                                    <Badge variant="outline" className="mt-2 uppercase text-[9px] font-black tracking-widest">{selectedBooking.source}</Badge>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 border-b pb-4 text-sm">
-                                <div>
-                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Soggiorno</Label>
-                                    <p className="font-bold text-lake-ink">{fmtItDate(selectedBooking.check_in)}</p>
-                                    <p className="font-bold text-lake-ink">{fmtItDate(selectedBooking.check_out)}</p>
-                                </div>
-                                <div className="text-right">
-                                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Totale Pagato</Label>
-                                    <p className="font-bold text-2xl text-lake-blue">€{selectedBooking.total_price}</p>
-                                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{selectedBooking.payment_status}</p>
-                                </div>
-                            </div>
-                            {selectedBooking.notes && (
-                                <div className="bg-amber-50 p-3 rounded-sm border border-amber-100 flex gap-2 italic">
-                                    <FileText className="w-4 h-4 text-amber-600 shrink-0" />
-                                    <div className="text-sm text-amber-900 leading-relaxed">"{selectedBooking.notes}"</div>
-                                </div>
-                            )}
-                            <div className="bg-slate-50 p-4 rounded-sm border border-slate-100 space-y-3">
-                                <div>
-                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><Hash className="w-3 h-3" /> Numero Prenotazione (ID)</Label>
-                                    <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-lake-ink border-slate-200">{selectedBooking.id}</code>
-                                </div>
-                                <div>
-                                    <Label className="text-[10px] uppercase text-slate-400 font-bold flex items-center gap-1"><CreditCard className="w-3 h-3" /> Stripe Payment ID</Label>
-                                    <code className="text-[11px] bg-white p-2 border rounded block mt-1 select-all font-mono text-emerald-700 font-bold border-slate-200 uppercase tracking-tighter">
-                                        {selectedBooking.payment_intent_id || "NON DISPONIBILE"}
-                                    </code>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter><Button onClick={() => setDetailOpen(false)} className="w-full bg-lake-ink hover:bg-lake-ink/90">Chiudi</Button></DialogFooter>
-                </DialogContent>
-            </Dialog>
+    settings = await get_settings()
 
-            <Dialog open={manualOpen} onOpenChange={setManualOpen}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader><DialogTitle>{manualForm.id ? "Modifica Dettagli" : "Nuovo Inserimento Manuale"}</DialogTitle></DialogHeader>
-                    <form onSubmit={handleManualSubmit} className="space-y-4 pt-4">
-                        {errorMessage && (
-                            <div className="bg-destructive/10 text-destructive text-xs p-3 rounded-sm border border-destructive/20 flex items-start gap-2 animate-in fade-in zoom-in-95 duration-150">
-                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                <div className="font-semibold leading-tight">{errorMessage}</div>
-                            </div>
-                        )}
-                        <div className="grid gap-2"><Label>Nome Ospite</Label><Input required value={manualForm.guest_name} onChange={e => setManualForm({ ...manualForm, guest_name: e.target.value })} /></div>
-                        <div className="grid gap-2"><Label>Email</Label><Input type="email" required value={manualForm.guest_email} onChange={e => setManualForm({ ...manualForm, guest_email: e.target.value })} /></div>
-                        <div className="grid gap-2"><Label>Telefono</Label><Input type="tel" value={manualForm.guest_phone} onChange={e => setManualForm({ ...manualForm, guest_phone: e.target.value })} placeholder="+39..." /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2"><Label>Check-in</Label><Input type="date" required value={manualForm.check_in} onChange={e => setManualForm({ ...manualForm, check_in: e.target.value })} /></div>
-                            <div className="grid gap-2"><Label>Check-out</Label><Input type="date" required value={manualForm.check_out} onChange={e => setManualForm({ ...manualForm, check_out: e.target.value })} /></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2"><Label>Adulti</Label><Input type="number" min="1" required value={manualForm.adults} onChange={e => setManualForm({ ...manualForm, adults: e.target.value })} /></div>
-                            <div className="grid gap-2"><Label>Bambini</Label><Input type="number" min="0" required value={manualForm.children} onChange={e => setManualForm({ ...manualForm, children: e.target.value })} /></div>
-                        </div>
-                        <div className="grid gap-2"><Label>Prezzo Totale (€)</Label><Input required type="number" step="0.01" value={manualForm.total_price} onChange={e => setManualForm({ ...manualForm, total_price: e.target.value })} /></div>
-                        <DialogFooter><Button type="submit" disabled={processing} className="w-full bg-emerald-600 hover:bg-emerald-700">{processing ? "Salvataggio..." : "Salva e Aggiorna"}</Button></DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-}
+    ok = await send_email_async(
+        b['guest_email'],
+        f"Promemoria saldo — {settings.get('villa_name','Light Blue')}",
+        email_balance_reminder_html(b, settings),
+    )
+
+    await db.bookings.update_one(
+        {'id': decoded_id},
+        {'$set': {'last_reminder_at': datetime.now(timezone.utc).isoformat()}}
+    )
+    return {'ok': ok}
