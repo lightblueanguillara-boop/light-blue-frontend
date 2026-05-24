@@ -21,7 +21,7 @@ const HERO = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Anguilla
 
 const services = [
     { icon: Wifi, title: "Wi-Fi", desc: "Connessione veloce in tutto l'appartamento." },
-    { icon: Snowflake, title: "Aria condizionata", desc: "Climatizzazione in camera e salotto." },
+    { icon: Snowflake, title: "Aria condizionata", desc: "Ambienti climatizzati per il massimo comfort." },
     { icon: Footprints, title: "Walking distance", desc: "Centro storico, lungolago e spiagge a pochi passi. Senza auto." },
     { icon: UtensilsCrossed, title: "Enogastronomia", desc: "Ristorante in convenzione con possibilità di servizio in casa" },
     { icon: Ship, title: "Escursioni in Barca", desc: "Convenzione con barche elettriche per visite turistiche" },
