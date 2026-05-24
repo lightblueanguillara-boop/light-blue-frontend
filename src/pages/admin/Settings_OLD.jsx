@@ -4,7 +4,7 @@ import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../components/ui/select";
-import { Trash2, Plus, Webhook, Sparkles } from "lucide-react";
+import { Trash2, Plus, Webhook, Sparkles, Info } from "lucide-react";
 import { Switch } from "../../components/ui/switch";
 import { fmtItDateTime } from "../../lib/date";
 import { api } from "../../lib/api";
@@ -49,6 +49,13 @@ export default function AdminSettings() {
     const backendUrl = process.env.REACT_APP_BACKEND_URL;
     const exportUrl = `${backendUrl}/api/ical/export.ics`;
 
+    // Mappatura dinamica delle spiegazioni basata sulla logica di email_helpers.py
+    const policyDetails = {
+        flexible: "Rimborso completo (100%) se l'ospite disdice almeno 24 ore prima del check-in. Nessun rimborso nelle ultime 24 ore.",
+        moderate: "Rimborso completo (100%) fino a 7 giorni prima del check-in. Rimborso del 50% tra 1 e 7 giorni prima. Nessun rimborso nelle ultime 24 ore.",
+        strict: "Rimborso completo (100%) solo entro 48 ore dalla prenotazione E almeno 14 giorni prima del check-in. Rimborso del 50% fino a 7 giorni prima."
+    };
+
     return (
         <div className="p-10 space-y-10" data-testid="admin-settings-page">
             <div>
@@ -71,7 +78,7 @@ export default function AdminSettings() {
                 <div className="md:col-span-3"><p className="font-display text-xl text-lake-ink">Tariffe e politiche</p></div>
                 <div><Label>Prezzo notte base (€)</Label><Input data-testid="s-price" type="number" value={s.default_price_per_night} onChange={(e) => update({ default_price_per_night: parseFloat(e.target.value || 0) })} /></div>
                 <div><Label>% Acconto</Label><Input data-testid="s-deposit" type="number" value={s.deposit_percent} onChange={(e) => update({ deposit_percent: parseFloat(e.target.value || 0) })} /></div>
-                <div>
+                <div className="space-y-2">
                     <Label>Politica cancellazione default</Label>
                     <Select value={s.default_cancellation_policy} onValueChange={(v) => update({ default_cancellation_policy: v })}>
                         <SelectTrigger data-testid="s-cancel-policy"><SelectValue /></SelectTrigger>
@@ -81,6 +88,13 @@ export default function AdminSettings() {
                             <SelectItem value="strict">Rigorosa (14 giorni)</SelectItem>
                         </SelectContent>
                     </Select>
+                    {/* Testo dinamico di spiegazione */}
+                    <div className="flex gap-2 p-3 bg-lake-cream/50 rounded-sm border border-lake-border/50">
+                        <Info size={14} className="text-lake-blue shrink-0 mt-0.5" />
+                        <p className="text-[11px] leading-normal text-lake-ink/70 italic">
+                            {policyDetails[s.default_cancellation_policy] || "Seleziona una politica per visualizzare i dettagli."}
+                        </p>
+                    </div>
                 </div>
             </div>
 
