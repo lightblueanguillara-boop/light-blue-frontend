@@ -1,6 +1,8 @@
 # dipendenze e build
 node_modules/
 build/
+# generato da scripts/gen-manifest.js
+public/manifest.webmanifest
 coverage/
 
 # variabili d'ambiente locali

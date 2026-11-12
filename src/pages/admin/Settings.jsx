@@ -7,6 +7,61 @@ import { Trash2, Plus, Webhook, Sparkles } from "lucide-react";
 import { Switch } from "../../components/ui/switch";
 import { fmtItDateTime } from "../../lib/date";
 import { api } from "../../lib/api";
+import { logoUrl, shareImageUrl } from "../../lib/brand";
+
+/** Caricamento di logo o immagine di anteprima: effetto immediato, senza "Salva impostazioni". */
+function BrandUploader({ kind, version, onChanged }) {
+    const [busy, setBusy] = useState(false);
+    const isLogo = kind === "logo";
+    const upload = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) { toast.error("Immagine troppo grande (massimo 8 MB)"); return; }
+        const fd = new FormData();
+        fd.append("file", file);
+        setBusy(true);
+        try {
+            const r = await api.post(`/admin/brand/${kind}`, fd);
+            onChanged(r.data.version);
+            toast.success(isLogo ? "Logo aggiornato ovunque" : "Immagine di anteprima aggiornata");
+        } catch (err) {
+            const d = err?.response?.data?.detail;
+            toast.error(typeof d === "string" ? d : "Caricamento non riuscito");
+        } finally { setBusy(false); }
+    };
+    const reset = async () => {
+        if (!window.confirm(isLogo ? "Ripristinare il logo originale?" : "Ripristinare la foto del lago come anteprima?")) return;
+        setBusy(true);
+        try { await api.delete(`/admin/brand/${kind}`); onChanged("default"); toast.success("Ripristinato"); }
+        catch { toast.error("Operazione non riuscita"); }
+        finally { setBusy(false); }
+    };
+    return (
+        <div className="space-y-3" data-testid={`brand-${kind}`}>
+            <div>
+                <p className="font-semibold text-lake-ink">{isLogo ? "Logo" : "Immagine di anteprima dei link"}</p>
+                <p className="text-xs text-lake-ink/60 mt-0.5">
+                    {isLogo
+                        ? "Usato per icona del browser, app sul telefono, sito, pannello ed email. Quadrato, almeno 512×512 px."
+                        : "Compare quando il link del sito viene condiviso su WhatsApp, Facebook o Telegram. Orizzontale, ideale 1200×630 px."}
+                </p>
+            </div>
+            <div className={`border border-lake-border rounded-sm bg-slate-50 flex items-center justify-center overflow-hidden ${isLogo ? "w-28 h-28" : "w-full max-w-sm aspect-[1200/630]"}`}>
+                <img src={isLogo ? logoUrl(version, 192) : shareImageUrl(version)} alt="" className={isLogo ? "w-24 h-24 rounded-full" : "w-full h-full object-cover"} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <label className={`inline-flex items-center px-4 h-10 rounded-sm bg-lake-blue text-white text-sm cursor-pointer ${busy ? "opacity-50 pointer-events-none" : ""}`}>
+                    {busy ? "Caricamento..." : isLogo ? "Carica nuovo logo" : "Carica nuova immagine"}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={upload} data-testid={`brand-${kind}-input`} />
+                </label>
+                {version && version !== "default" && (
+                    <button type="button" onClick={reset} disabled={busy} className="px-4 h-10 rounded-sm border border-lake-border text-sm">Ripristina originale</button>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function AdminSettings() {
     const [s, setS] = useState(null);
@@ -80,6 +135,17 @@ export default function AdminSettings() {
                 <div><Label>Lago / Località</Label><Input data-testid="s-villa-lake" value={s.villa_lake || ""} onChange={(e) => update({ villa_lake: e.target.value })} /></div>
                 <div><Label>Codice CIN (Codice Identificativo Nazionale)</Label><Input data-testid="s-villa-cir" value={s.villa_cir || ""} onChange={(e) => update({ villa_cir: e.target.value })} /></div>
                 <div className="md:col-span-2"><Label>Descrizione</Label><Textarea rows={4} data-testid="s-villa-desc" value={s.villa_description || ""} onChange={(e) => update({ villa_description: e.target.value })} /></div>
+            </div>
+
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-6" data-testid="s-brand">
+                <div>
+                    <p className="font-display text-xl text-lake-ink">Logo e anteprima</p>
+                    <p className="text-sm text-lake-ink/60 mt-1">Le modifiche sono immediate. WhatsApp può impiegare qualche giorno ad aggiornare l'anteprima di un link già condiviso in passato.</p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <BrandUploader kind="logo" version={s.logo_version} onChanged={(v) => update({ logo_version: v })} />
+                    <BrandUploader kind="share" version={s.share_version} onChanged={(v) => update({ share_version: v })} />
+                </div>
             </div>
 
             <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-5" data-testid="s-booking-mode">

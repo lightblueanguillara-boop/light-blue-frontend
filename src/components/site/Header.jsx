@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { logoUrl } from "../../lib/brand";
 
 export default function Header() {
     const [info, setInfo] = useState(null);
@@ -11,7 +12,7 @@ export default function Header() {
             <div className="mx-auto max-w-7xl px-6 sm:px-10 py-5 flex items-center justify-between">
                 <Link to="/" className="flex items-center gap-3" data-testid="logo-link">
                     <div className="w-11 h-11 rounded-full bg-transparent overflow-hidden flex items-center justify-center">
-                        <img src="/favicon.ico" alt="Logo" className="w-full h-full object-contain rounded-full" />
+                        {info && <img src={logoUrl(info.logo_version, 192)} alt="Logo Light Blue" width="44" height="44" className="w-full h-full object-contain rounded-full" />}
                     </div>
                     <div className="leading-tight">
                         <p className="font-display text-lg tracking-tight text-lake-ink">Light Blue</p>

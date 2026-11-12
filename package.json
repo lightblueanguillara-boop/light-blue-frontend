@@ -29,7 +29,9 @@
     "yet-another-react-lightbox": "^3.21.7"
   },
   "scripts": {
+    "prestart": "node scripts/gen-manifest.js",
     "start": "craco start",
+    "prebuild": "node scripts/gen-manifest.js",
     "build": "craco build",
     "test": "craco test"
   },

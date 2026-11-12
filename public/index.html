@@ -2,10 +2,35 @@
 <html lang="it">
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#2A333C" />
         <meta name="description" content="Light Blue Anguillara - Casa vacanze sul Lago di Bracciano, nel centro storico di Anguillara Sabazia. Prenota il tuo soggiorno." />
-        <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+
+        <!-- Logo: gestito da Impostazioni > Logo (servito dal backend in tutte le misure) -->
+        <link rel="icon" href="%REACT_APP_BACKEND_URL%/api/brand/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" href="%REACT_APP_BACKEND_URL%/api/brand/logo-32.png" />
+        <link rel="apple-touch-icon" href="%REACT_APP_BACKEND_URL%/api/brand/logo-180.png" />
+
+        <!-- App "Light Blue" sul telefono (solo il pannello di gestione) -->
+        <link rel="manifest" href="%PUBLIC_URL%/manifest.webmanifest" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Light Blue" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+        <!-- Anteprima dei link su WhatsApp, Facebook, Telegram (immagine da Impostazioni) -->
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Light Blue" />
+        <meta property="og:locale" content="it_IT" />
+        <meta property="og:title" content="Light Blue - Casa vacanze ad Anguillara Sabazia" />
+        <meta property="og:description" content="Appartamento vista lago nel centro storico di Anguillara Sabazia, sul Lago di Bracciano. Verifica le date e prenota." />
+        <meta property="og:image" content="%REACT_APP_BACKEND_URL%/api/brand/share.jpg" />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Anguillara Sabazia vista dal Lago di Bracciano" />
+        <meta name="twitter:card" content="summary_large_image" />
+
         <title>Light Blue | Anguillara</title>
     </head>
     <body>

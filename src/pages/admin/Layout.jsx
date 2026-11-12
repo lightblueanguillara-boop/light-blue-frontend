@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { api } from "../../lib/api";
+import { logoUrl } from "../../lib/brand";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
     LayoutDashboard,
@@ -29,6 +31,9 @@ export default function AdminLayout() {
     const location = useLocation();
     const email = localStorage.getItem("lv_admin_email");
     const [menuOpen, setMenuOpen] = useState(false);
+    const [logoVersion, setLogoVersion] = useState(null);
+    useEffect(() => { api.get("/villa/info").then((r) => setLogoVersion(r.data.logo_version || "default")).catch(() => setLogoVersion("default")); }, []);
+    const Logo = ({ size }) => (logoVersion ? <img src={logoUrl(logoVersion, 192)} alt="" width={size} height={size} className="rounded-full shrink-0" style={{ width: size, height: size }} /> : <span style={{ width: size, height: size }} className="shrink-0" />);
 
     // su telefono il menu si chiude quando si cambia pagina
     useEffect(() => { setMenuOpen(false); }, [location.pathname]);
@@ -43,7 +48,7 @@ export default function AdminLayout() {
         <div className="min-h-screen lg:flex bg-lake-cream">
             {/* barra superiore solo su schermi piccoli */}
             <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-lake-cream border-b border-lake-border">
-                <Link to="/admin" className="font-display text-lg text-lake-ink">Light Blue <span className="overline ml-1">Admin</span></Link>
+                <Link to="/admin" className="flex items-center gap-2 font-display text-lg text-lake-ink"><Logo size={28} />Light Blue <span className="overline ml-1">Admin</span></Link>
                 <button onClick={() => setMenuOpen(true)} aria-label="Apri menu" data-testid="admin-menu-btn" className="p-2 -mr-2 text-lake-ink">
                     <Menu size={22} />
                 </button>
@@ -57,9 +62,12 @@ export default function AdminLayout() {
                 data-testid="admin-sidebar"
             >
                 <div className="flex items-center justify-between border-b border-lake-border">
-                    <Link to="/admin" className="px-6 py-6">
-                        <p className="font-display text-xl text-lake-ink leading-none">Light Blue</p>
-                        <p className="overline mt-1">Admin · Anguillara</p>
+                    <Link to="/admin" className="px-6 py-6 flex items-center gap-3">
+                        <Logo size={36} />
+                        <span>
+                            <span className="block font-display text-xl text-lake-ink leading-none">Light Blue</span>
+                            <span className="block overline mt-1">Admin · Anguillara</span>
+                        </span>
                     </Link>
                     <button onClick={() => setMenuOpen(false)} aria-label="Chiudi menu" className="lg:hidden p-4 text-lake-ink/60">
                         <X size={20} />
