@@ -21,13 +21,24 @@ export default function Conditions() {
             <h2>2. Prenotazione e prezzo</h2>
             <ul>
                 <li>
+                    <strong>Prenotazione su richiesta</strong>: quando il sito opera su richiesta, l'invio del modulo non
+                    costituisce una prenotazione e non comporta alcun addebito. Le date restano riservate per il tempo
+                    indicato nella pagina di prenotazione{i.request_hold_hours ? ` (${i.request_hold_hours} ore)` : ""}. Se
+                    il gestore accetta, ricevi via email un link di pagamento valido per il tempo indicato
+                    {i.payment_link_hours ? ` (${i.payment_link_hours} ore)` : ""}: la prenotazione è confermata solo a
+                    pagamento completato. Se la richiesta viene rifiutata o scade, le date tornano disponibili.
+                </li>
+                <li>
+                    <strong>Prenotazione immediata</strong>: quando il sito opera con pagamento immediato, la prenotazione
+                    è confermata al termine del pagamento online.
+                </li>
+                <li>
                     Il prezzo mostrato prima del pagamento è il prezzo totale del soggiorno per le date e il numero di
                     ospiti indicati, comprensivo di tutti i costi obbligatori, salvo l'eventuale imposta di soggiorno
                     indicata al punto 4.
                 </li>
                 <li>
-                    La prenotazione è confermata quando il pagamento va a buon fine; riceverai una email di conferma con
-                    il riepilogo del soggiorno.
+                    In entrambi i casi riceverai una email di conferma con il riepilogo del soggiorno.
                 </li>
                 <li>Il pagamento avviene con carta tramite Stripe. Il sito non conserva i dati della carta.</li>
             </ul>

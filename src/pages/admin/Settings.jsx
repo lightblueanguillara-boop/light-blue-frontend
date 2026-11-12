@@ -37,7 +37,7 @@ export default function AdminSettings() {
     const save = async () => {
         setSaving(true);
         try { await api.put("/admin/settings", s); toast.success("Impostazioni salvate"); }
-        catch { toast.error("Errore"); }
+        catch (e) { const d = e?.response?.data?.detail; toast.error(typeof d === "string" ? `Non salvato: ${d}` : "Errore nel salvataggio"); }
         finally { setSaving(false); }
     };
 
@@ -80,6 +80,39 @@ export default function AdminSettings() {
                 <div><Label>Lago / Località</Label><Input data-testid="s-villa-lake" value={s.villa_lake || ""} onChange={(e) => update({ villa_lake: e.target.value })} /></div>
                 <div><Label>Codice CIN (Codice Identificativo Nazionale)</Label><Input data-testid="s-villa-cir" value={s.villa_cir || ""} onChange={(e) => update({ villa_cir: e.target.value })} /></div>
                 <div className="md:col-span-2"><Label>Descrizione</Label><Textarea rows={4} data-testid="s-villa-desc" value={s.villa_description || ""} onChange={(e) => update({ villa_description: e.target.value })} /></div>
+            </div>
+
+            <div className="bg-white border border-lake-border rounded-sm p-8 space-y-5" data-testid="s-booking-mode">
+                <div>
+                    <p className="font-display text-xl text-lake-ink">Modalità di prenotazione</p>
+                    <p className="text-sm text-lake-ink/60 mt-1">Scegli come gli ospiti prenotano dal sito.</p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                    {[
+                        { v: "request", t: "Su richiesta", d: "L'ospite invia una richiesta, tu la accetti o rifiuti dal pannello. Se accetti riceve il link per pagare." },
+                        { v: "instant", t: "Immediata", d: "L'ospite paga subito con Stripe e la prenotazione è confermata automaticamente." },
+                    ].map((o) => (
+                        <button type="button" key={o.v} onClick={() => update({ booking_mode: o.v })} data-testid={`mode-${o.v}`}
+                            className={`text-left p-4 rounded-sm border-2 transition-all ${(s.booking_mode || "request") === o.v ? "border-lake-blue bg-lake-blue/5" : "border-lake-border hover:border-lake-border/70"}`}>
+                            <p className="font-bold text-lake-ink">{o.t}</p>
+                            <p className="text-sm text-lake-ink/65 mt-1">{o.d}</p>
+                        </button>
+                    ))}
+                </div>
+                {(s.booking_mode || "request") === "request" && (
+                    <div className="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <Label>Ore per rispondere a una richiesta (date bloccate)</Label>
+                            <Input type="number" min={1} max={168} data-testid="s-hold-hours" value={s.request_hold_hours ?? 24} onChange={(e) => update({ request_hold_hours: parseInt(e.target.value || 0) })} />
+                            <p className="text-xs text-lake-ink/50 mt-1">Scaduto il tempo senza risposta, la richiesta si chiude e le date si liberano (1-168 ore).</p>
+                        </div>
+                        <div>
+                            <Label>Ore per pagare dopo l'accettazione</Label>
+                            <Input type="number" min={1} max={24} data-testid="s-payment-hours" value={s.payment_link_hours ?? 24} onChange={(e) => update({ payment_link_hours: parseInt(e.target.value || 0) })} />
+                            <p className="text-xs text-lake-ink/50 mt-1">Durata del link di pagamento Stripe (massimo 24 ore, limite di Stripe).</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-2 gap-5" data-testid="s-legal">

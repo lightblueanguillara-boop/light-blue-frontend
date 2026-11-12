@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { api } from "../../lib/api";
 
@@ -19,6 +20,15 @@ export default function AdminOverview() {
         <div className="p-10" data-testid="admin-overview-page">
             <p className="overline">Panoramica</p>
             <h1 className="font-display text-4xl text-lake-ink mt-2">Dashboard</h1>
+
+            {data.totals.open_requests > 0 && (
+                <Link to="/admin/bookings" className="mt-8 flex items-center justify-between gap-4 bg-sky-50 border border-sky-200 rounded-sm p-5 hover:bg-sky-100 transition-colors" data-testid="open-requests-banner">
+                    <span className="text-sky-900">
+                        <strong>{data.totals.open_requests}</strong> {data.totals.open_requests === 1 ? "richiesta di prenotazione da valutare" : "richieste di prenotazione da valutare"}
+                    </span>
+                    <span className="text-sm font-semibold text-sky-700 underline">Apri le richieste →</span>
+                </Link>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
                 <Stat label="Guadagni 12 mesi" value={`€${data.totals.revenue.toFixed(0)}`} testid="stat-revenue" />

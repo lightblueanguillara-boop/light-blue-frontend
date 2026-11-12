@@ -24,7 +24,7 @@ export default function PaymentCancel() {
                 <div className="max-w-lg w-full bg-white border border-lake-border p-12 rounded-sm text-center">
                     <XCircle className="w-12 h-12 text-lake-ink/70 mx-auto" strokeWidth={1.2} />
                     <h1 className="font-display text-3xl text-lake-ink mt-6">Pagamento annullato</h1>
-                    <p className="mt-3 text-lake-ink/70">Nessun addebito è stato effettuato. Puoi riprovare quando vuoi.</p>
+                    <p className="mt-3 text-lake-ink/70">Nessun addebito è stato effettuato. Se hai ricevuto un link di pagamento via email puoi riutilizzarlo finché è valido, altrimenti puoi riprovare quando vuoi.</p>
                     <Link to="/book" className="mt-8 inline-block px-6 py-3 rounded-sm bg-lake-blue text-white text-sm" data-testid="cancel-retry-btn">Riprova</Link>
                 </div>
             </section>

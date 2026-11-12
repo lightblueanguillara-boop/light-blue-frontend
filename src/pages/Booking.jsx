@@ -10,6 +10,7 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
+import { CheckCircle2 } from "lucide-react";
 import { api } from "../lib/api";
 import { fmtItDate, toIsoDate } from "../lib/date";
 
@@ -27,6 +28,11 @@ export default function Booking() {
     
     const [blocked, setBlocked] = useState([]);
     const [touristTax, setTouristTax] = useState("");
+    // Modalità impostata dal proprietario: "request" (su richiesta, predefinita) o "instant" (pagamento subito)
+    const [mode, setMode] = useState("request");
+    const [holdHours, setHoldHours] = useState(24);
+    const [requestSent, setRequestSent] = useState(null);
+    const isRequest = mode !== "instant";
     const [quote, setQuote] = useState(null);
     const [isRefundable, setIsRefundable] = useState(true);
     const [paymentChoice] = useState("full");
@@ -39,6 +45,7 @@ export default function Booking() {
         children: 0,
         notes: "",
         consent_newsletter: false,
+        contact_whatsapp: false,
     });
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -52,7 +59,11 @@ export default function Booking() {
     }, []);
 
     useEffect(() => {
-        api.get("/villa/info").then((r) => setTouristTax(r.data.tourist_tax_note || "")).catch(() => {});
+        api.get("/villa/info").then((r) => {
+            setTouristTax(r.data.tourist_tax_note || "");
+            setMode(r.data.booking_mode || "request");
+            setHoldHours(r.data.request_hold_hours || 24);
+        }).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -72,13 +83,27 @@ export default function Booking() {
         }
     }, [range]);
 
-    const canSubmit = quote?.available && acceptTerms && form.guest_name && form.guest_email && range?.from && range?.to;
+    const canSubmit = quote?.available && acceptTerms && form.guest_name && form.guest_email && range?.from && range?.to
+        && (!isRequest || form.guest_phone.trim().length >= 6);
 
     const submit = async (e) => {
         e.preventDefault();
         if (!canSubmit) return;
         setSubmitting(true);
         try {
+            if (isRequest) {
+                const r = await api.post("/bookings/request", {
+                    ...form,
+                    check_in: fmt(range.from),
+                    check_out: fmt(range.to),
+                    payment_choice: "full",
+                    is_refundable: isRefundable,
+                    accept_terms: acceptTerms,
+                });
+                setRequestSent({ ...r.data, from: range.from, to: range.to });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                return;
+            }
             const r = await api.post("/bookings/checkout", {
                 ...form,
                 check_in: fmt(range.from),
@@ -90,7 +115,9 @@ export default function Booking() {
             });
             window.location.href = r.data.url;
         } catch (err) {
-            toast.error(err?.response?.data?.detail || "Errore nel checkout");
+            const detail = err?.response?.data?.detail;
+            toast.error(typeof detail === "string" ? detail : "Si è verificato un errore. Riprova.");
+        } finally {
             setSubmitting(false);
         }
     };
@@ -107,10 +134,33 @@ export default function Booking() {
             <section className="mx-auto max-w-7xl px-6 sm:px-10 pt-8 md:pt-12 pb-6 text-center md:text-left">
                 <p className="overline text-xs md:text-sm">Prenota il tuo soggiorno</p>
                 <h1 className="font-display text-3xl md:text-5xl text-lake-ink mt-3 tracking-tight">
-                    Seleziona le date.
+                    {requestSent ? "Ci siamo quasi." : "Seleziona le date."}
                 </h1>
+                {isRequest && !requestSent && (
+                    <p className="mt-3 text-sm text-lake-ink/70 max-w-2xl">
+                        Le prenotazioni avvengono su richiesta: scegli le date e invia la richiesta, ti risponderemo entro {holdHours} ore.
+                    </p>
+                )}
             </section>
 
+            {requestSent ? (
+            <section className="mx-auto max-w-2xl px-4 sm:px-10 pb-20" data-testid="request-sent">
+                <div className="bg-white border border-lake-border rounded-sm p-8 sm:p-12 text-center space-y-4">
+                    <CheckCircle2 className="w-12 h-12 text-lake-blue mx-auto" strokeWidth={1.2} />
+                    <h2 className="font-display text-3xl text-lake-ink">Richiesta inviata</h2>
+                    <p className="text-lake-ink/75">
+                        Grazie {form.guest_name.split(" ")[0]}! Abbiamo ricevuto la tua richiesta per il soggiorno dal{" "}
+                        <strong>{fmtItDate(requestSent.from)}</strong> al <strong>{fmtItDate(requestSent.to)}</strong>{" "}
+                        (totale €{requestSent.total_price}).
+                    </p>
+                    <p className="text-lake-ink/75">
+                        Ti risponderemo entro {requestSent.hold_hours} ore all'indirizzo <strong>{form.guest_email}</strong>
+                        {form.contact_whatsapp ? " o su WhatsApp" : ""}. Nel frattempo le date restano riservate per te e non ti è stato addebitato nulla.
+                    </p>
+                    <Link to="/" className="mt-4 inline-block px-6 py-3 rounded-sm bg-lake-blue text-white text-sm">Torna alla home</Link>
+                </div>
+            </section>
+            ) : (
             <section className="mx-auto max-w-7xl px-4 sm:px-10 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
                 
                 <div className="lg:col-span-7 bg-white border border-lake-border rounded-sm p-2 sm:p-8 flex justify-center overflow-hidden" data-testid="booking-calendar">
@@ -138,7 +188,7 @@ export default function Booking() {
                         <div className="grid gap-3">
                             <Input data-testid="guest-name" required placeholder="Nome e cognome" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} />
                             <Input data-testid="guest-email" required type="email" placeholder="Email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} />
-                            <Input data-testid="guest-phone" placeholder="Telefono (opzionale)" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} />
+                            <Input data-testid="guest-phone" type="tel" required={isRequest} placeholder={isRequest ? "Telefono (per comunicazioni sulla richiesta)" : "Telefono (opzionale)"} value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} />
                             
                             <div className="grid grid-cols-2 gap-4 mt-2">
                                 <div className="space-y-1.5">
@@ -244,7 +294,7 @@ export default function Booking() {
                                     <div className="space-y-1 text-lake-ink/80">
                                         <div className="flex justify-between"><span>Notti:</span><span className="font-bold">{quote.nights}</span></div>
                                         <div className="flex justify-between border-t border-lake-border/40 pt-2 mt-2">
-                                            <span className="text-lake-ink font-bold">Totale da pagare:</span>
+                                            <span className="text-lake-ink font-bold">{isRequest ? "Totale soggiorno:" : "Totale da pagare:"}</span>
                                             <span className="text-xl font-display text-lake-blue">€{displayPrice}</span>
                                         </div>
                                         {!quote.available && <p className="text-red-600 text-xs mt-2 font-bold italic">Date non disponibili.</p>}
@@ -264,6 +314,12 @@ export default function Booking() {
                                 Ho letto e accetto le <Link to="/condizioni" target="_blank" className="underline">Condizioni di prenotazione</Link>, inclusa la politica di cancellazione della tariffa scelta. <span className="text-red-600">*</span>
                             </span>
                         </label>
+                        {isRequest && (
+                            <label className="flex items-start gap-3 text-[11px] text-lake-ink/70 cursor-pointer">
+                                <Checkbox data-testid="book-whatsapp" checked={form.contact_whatsapp} onCheckedChange={(v) => setForm({ ...form, contact_whatsapp: !!v })} />
+                                <span>Potete contattarmi anche su WhatsApp al numero indicato per questa richiesta (facoltativo).</span>
+                            </label>
+                        )}
                         <label className="flex items-start gap-3 text-[11px] text-lake-ink/70 cursor-pointer">
                             <Checkbox data-testid="book-consent" checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
                             <span>Desidero ricevere via email offerte e novità (facoltativo, revocabile in qualsiasi momento).</span>
@@ -273,20 +329,27 @@ export default function Booking() {
                         </p>
 
                         <button type="submit" disabled={!canSubmit || submitting} data-testid="book-submit" className="w-full py-4 rounded-sm bg-lake-blue text-white text-sm hover:bg-lake-ink transition-all disabled:opacity-50 font-bold uppercase tracking-widest shadow-sm">
-                            {submitting ? "Reindirizzamento..." : `Conferma e Paga · €${displayPrice || ""}`}
+                            {isRequest
+                                ? (submitting ? "Invio in corso..." : "Invia richiesta di prenotazione")
+                                : (submitting ? "Reindirizzamento..." : `Conferma e Paga · €${displayPrice || ""}`)}
                         </button>
                         
                         <div className="flex flex-col items-center gap-2">
-                            <p className="text-[10px] text-lake-ink/50 leading-tight text-center uppercase tracking-tighter">
-                                Pagamento sicuro al 100% via Stripe
-                            </p>
-                            <div className="flex gap-2 opacity-40 grayscale scale-75">
-                                {/* Qui puoi inserire icone carte se le hai */}
-                            </div>
+                            {isRequest ? (
+                                <p className="text-[11px] text-lake-ink/60 leading-snug text-center">
+                                    Nessun addebito ora. Le date restano riservate per te per {holdHours} ore: se la richiesta viene
+                                    accettata riceverai via email un link per pagare in modo sicuro con Stripe e confermare.
+                                </p>
+                            ) : (
+                                <p className="text-[10px] text-lake-ink/50 leading-tight text-center uppercase tracking-tighter">
+                                    Pagamento sicuro al 100% via Stripe
+                                </p>
+                            )}
                         </div>
                     </div>
                 </form>
             </section>
+            )}
             <Footer />
         </div>
     );

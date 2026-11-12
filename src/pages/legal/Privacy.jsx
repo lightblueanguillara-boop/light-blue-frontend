@@ -28,6 +28,13 @@ export default function Privacy() {
                     esecuzione del contratto (art. 6.1.b GDPR) e obblighi di legge, ad es. fiscali (art. 6.1.c).
                 </li>
                 <li>
+                    <strong>Richieste di prenotazione</strong>: gli stessi dati della prenotazione, con il telefono
+                    obbligatorio per le comunicazioni sulla richiesta. Base giuridica: misure precontrattuali richieste
+                    dall'interessato (art. 6.1.b). Solo se lo hai autorizzato spuntando l'apposita casella, il gestore
+                    può scriverti anche su WhatsApp (servizio di WhatsApp Ireland Ltd., gruppo Meta) dal proprio
+                    telefono, per comunicazioni relative alla richiesta.
+                </li>
+                <li>
                     <strong>Richieste dal modulo contatti</strong>: nome, email, telefono (facoltativo) e testo del
                     messaggio. Finalità: rispondere alla richiesta. Base giuridica: misure precontrattuali richieste
                     dall'interessato (art. 6.1.b).
