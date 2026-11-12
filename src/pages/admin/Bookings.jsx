@@ -36,6 +36,14 @@ const statusLabels = {
     expired: "Scaduta",
 };
 
+const paymentLabels = { unpaid: "Non pagato", deposit_paid: "Acconto pagato", fully_paid: "Saldato", refunded: "Rimborsato" };
+const paymentColors = {
+    unpaid: "bg-slate-100 text-slate-600",
+    deposit_paid: "bg-amber-100 text-amber-800",
+    fully_paid: "bg-emerald-100 text-emerald-700",
+    refunded: "bg-sky-100 text-sky-700",
+};
+
 // Stati che occupano il calendario (stessa lista del backend)
 const BLOCKING = ["pending", "confirmed", "external", "request", "awaiting_payment"];
 const REQUEST_STATES = ["request", "awaiting_payment"];
@@ -256,218 +264,278 @@ export default function AdminBookings() {
         setDetailOpen(true);
     };
 
+    // ---------- elementi condivisi tra tabella (PC) e schede (telefono)
+    const StatusBadge = ({ b }) => (
+        <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold whitespace-nowrap`}>
+            {statusLabels[b.status] || b.status}
+        </Badge>
+    );
+    const PaymentBadge = ({ b }) => (
+        <Badge className={`${paymentColors[b.payment_status] || ""} border-none text-[10px] uppercase font-bold whitespace-nowrap`}>
+            {paymentLabels[b.payment_status] || b.payment_status}
+        </Badge>
+    );
+    const StatusSelect = ({ b, className = "" }) => (
+        <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
+            <SelectTrigger className={`h-9 text-xs font-semibold ${className}`}><SelectValue /></SelectTrigger>
+            <SelectContent>
+                <SelectItem value="pending">In attesa pagamento</SelectItem>
+                <SelectItem value="confirmed">Confermata</SelectItem>
+                <SelectItem value="cancelled">Cancellata</SelectItem>
+                <SelectItem value="external">Esterna</SelectItem>
+            </SelectContent>
+        </Select>
+    );
+    const PaymentSelect = ({ b, className = "" }) => (
+        <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
+            <SelectTrigger className={`h-9 text-xs font-semibold ${className}`}><SelectValue /></SelectTrigger>
+            <SelectContent>
+                <SelectItem value="unpaid">Non pagato</SelectItem>
+                <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
+                <SelectItem value="fully_paid">Saldato</SelectItem>
+                <SelectItem value="refunded">Rimborsato</SelectItem>
+            </SelectContent>
+        </Select>
+    );
+    const Amount = ({ b }) => (b.total_price > 0 ? <>€{b.total_price}</> : <span className="text-lake-ink/30">—</span>);
+    const nights = (b) => Math.max(0, Math.round((new Date(b.check_out) - new Date(b.check_in)) / 86400000));
+    const isExternal = (b) => b.source === "airbnb" || b.source === "booking";
+    const sourceLabel = { website: "Sito", manual: "Manuale", airbnb: "Airbnb", booking: "Booking.com" };
+    const EmptyRow = ({ text }) => <p className="text-center py-12 text-lake-ink/40 text-sm italic">{text}</p>;
+
     const BookingsTable = ({ rows, showActions = true }) => (
-        <div className="bg-white border border-lake-border rounded-sm overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
-                        <TableHead>Ospite</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Importo</TableHead>
-                        <TableHead>Stato Prenotazione</TableHead>
-                        <TableHead>Stato Pagamento</TableHead>
-                        <TableHead>Fonte</TableHead>
-                        {showActions && <TableHead className="text-right">Azioni</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {rows.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={showActions ? 7 : 6} className="text-center py-12 text-lake-ink/40 text-sm italic">
-                                Nessuna prenotazione trovata
-                            </TableCell>
+        <>
+            {/* ---- PC: tabella */}
+            <div className="hidden md:block bg-white border border-lake-border rounded-sm overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
+                            <TableHead>Ospite</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Importo</TableHead>
+                            <TableHead>Stato prenotazione</TableHead>
+                            <TableHead>Pagamento</TableHead>
+                            <TableHead>Fonte</TableHead>
+                            {showActions && <TableHead className="text-right">Azioni</TableHead>}
                         </TableRow>
-                    )}
-                    {rows.map((b) => (
-                        <TableRow key={b.id} className="hover:bg-slate-50/50 transition-colors">
-                            <TableCell>
-                                <button onClick={() => openDetail(b)} className="text-left group flex flex-col">
-                                    <div className="flex items-center gap-1">
-                                        <span className="font-bold text-lake-ink group-hover:text-lake-blue transition-colors underline decoration-dotted underline-offset-4 tracking-tight">
-                                            {b.guest_name}
+                    </TableHeader>
+                    <TableBody>
+                        {rows.length === 0 && (
+                            <TableRow><TableCell colSpan={showActions ? 7 : 6}><EmptyRow text="Nessuna prenotazione trovata" /></TableCell></TableRow>
+                        )}
+                        {rows.map((b) => (
+                            <TableRow key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                                <TableCell className="max-w-[220px]">
+                                    <button onClick={() => openDetail(b)} className="text-left group block w-full">
+                                        <span className="flex items-center gap-1">
+                                            <span className="font-bold text-lake-ink group-hover:text-lake-blue underline decoration-dotted underline-offset-4 truncate">{b.guest_name}</span>
+                                            <Info className="w-3 h-3 shrink-0 text-lake-ink/20 group-hover:text-lake-blue" />
                                         </span>
-                                        <Info className="w-3 h-3 text-lake-ink/20 group-hover:text-lake-blue" />
-                                    </div>
-                                    <span className="text-[10px] text-lake-ink/50 uppercase">{b.guest_email}</span>
-                                </button>
-                            </TableCell>
-                            <TableCell className="text-sm font-medium whitespace-nowrap italic text-slate-600 tracking-tight">
-                                {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
-                            </TableCell>
-                            <TableCell className="text-sm font-bold text-lake-blue">€{b.total_price}</TableCell>
-
-                            <TableCell>
-                                {showActions ? (
-                                    <Select value={b.status} onValueChange={(v) => update(b.id, { status: v })}>
-                                        <SelectTrigger className="w-32 h-8 text-[11px] font-semibold"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pending">In attesa pagamento</SelectItem>
-                                            <SelectItem value="confirmed">Confermata</SelectItem>
-                                            <SelectItem value="cancelled">Cancellata</SelectItem>
-                                            <SelectItem value="external">Esterna</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                ) : (
-                                    <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold`}>
-                                        {statusLabels[b.status] || b.status}
-                                    </Badge>
-                                )}
-                            </TableCell>
-
-                            <TableCell>
-                                <Select value={b.payment_status} onValueChange={(v) => update(b.id, { payment_status: v })}>
-                                    <SelectTrigger className="w-36 h-8 text-[11px] border-none shadow-none focus:ring-0 p-0">
-                                        <Badge className={`${statusColors[b.status] || ""} border-none text-[10px] uppercase font-bold w-full justify-center`}>
-                                            {b.payment_status}
-                                        </Badge>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="unpaid">Non pagato</SelectItem>
-                                        <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
-                                        <SelectItem value="fully_paid">Saldato</SelectItem>
-                                        <SelectItem value="refunded">Rimborsato</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </TableCell>
-
-                            <TableCell className="text-[10px] uppercase font-black text-lake-ink/40 tracking-widest">{b.source}</TableCell>
-
-                            {showActions && (
-                                <TableCell className="text-right">
-                                    <div className="flex flex-col items-end gap-1 text-[11px]">
-                                        <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1 font-bold">
-                                            <Pencil className="w-3 h-3" /> MODIFICA
-                                        </button>
-                                        <button onClick={() => askCancel(b)} className="text-red-500 hover:underline font-bold uppercase tracking-tighter flex items-center gap-1">
-                                            <Trash2 className="w-3 h-3" /> ELIMINA
-                                        </button>
-                                    </div>
+                                        {b.guest_email && <span className="block text-[11px] text-lake-ink/50 truncate">{b.guest_email}</span>}
+                                    </button>
                                 </TableCell>
-                            )}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
+                                <TableCell className="text-sm whitespace-nowrap text-slate-600">
+                                    {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
+                                    <span className="block text-[11px] text-lake-ink/45">{nights(b)} notti</span>
+                                </TableCell>
+                                <TableCell className="text-sm font-bold text-lake-blue whitespace-nowrap"><Amount b={b} /></TableCell>
+                                <TableCell>{showActions ? <StatusSelect b={b} className="w-40" /> : <StatusBadge b={b} />}</TableCell>
+                                <TableCell>{showActions && !isExternal(b) ? <PaymentSelect b={b} className="w-36" /> : <PaymentBadge b={b} />}</TableCell>
+                                <TableCell className="text-[11px] font-semibold text-lake-ink/50 whitespace-nowrap">{sourceLabel[b.source] || b.source}</TableCell>
+                                {showActions && (
+                                    <TableCell className="text-right">
+                                        <div className="flex flex-col items-end gap-1 text-[11px] font-bold">
+                                            <button onClick={() => openEdit(b)} className="text-lake-ink hover:text-lake-blue flex items-center gap-1"><Pencil className="w-3 h-3" /> MODIFICA</button>
+                                            <button onClick={() => askCancel(b)} className="text-red-500 hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> ELIMINA</button>
+                                        </div>
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* ---- telefono: schede */}
+            <div className="md:hidden space-y-3" data-testid="bookings-cards">
+                {rows.length === 0 && <div className="bg-white border border-lake-border rounded-sm"><EmptyRow text="Nessuna prenotazione trovata" /></div>}
+                {rows.map((b) => (
+                    <div key={b.id} className="bg-white border border-lake-border rounded-sm p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                            <button onClick={() => openDetail(b)} className="text-left min-w-0">
+                                <span className="block font-bold text-lake-ink truncate underline decoration-dotted underline-offset-4">{b.guest_name}</span>
+                                {b.guest_email && <span className="block text-xs text-lake-ink/50 truncate">{b.guest_email}</span>}
+                            </button>
+                            <span className="text-base font-bold text-lake-blue whitespace-nowrap"><Amount b={b} /></span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-slate-600">
+                            <span>{fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}</span>
+                            <span className="text-xs text-lake-ink/50">{nights(b)} notti · {sourceLabel[b.source] || b.source}</span>
+                        </div>
+                        {showActions ? (
+                            <div className="grid grid-cols-2 gap-2">
+                                <StatusSelect b={b} className="w-full" />
+                                {isExternal(b) ? <div className="flex items-center"><PaymentBadge b={b} /></div> : <PaymentSelect b={b} className="w-full" />}
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2"><StatusBadge b={b} /><PaymentBadge b={b} /></div>
+                        )}
+                        {showActions && (
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                                <Button variant="outline" size="sm" onClick={() => openEdit(b)}><Pencil className="w-3.5 h-3.5 mr-1.5" /> Modifica</Button>
+                                <Button variant="outline" size="sm" onClick={() => askCancel(b)} className="text-red-600 border-red-200"><Trash2 className="w-3.5 h-3.5 mr-1.5" /> Elimina</Button>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </>
     );
 
+    const Deadline = ({ b }) => {
+        const deadline = b.status === "request" ? b.request_expires_at : b.payment_due_at;
+        return (
+            <span className="flex items-center gap-1 text-[11px] text-lake-ink/60" title={fmtItDateTime(deadline)}>
+                <Clock className="w-3 h-3 shrink-0" />
+                {b.status === "request" ? "Rispondi entro " : "Pagamento entro "}{timeLeft(deadline)}
+            </span>
+        );
+    };
+
     const RequestsTable = () => (
-        <div className="bg-white border border-lake-border rounded-sm overflow-hidden" data-testid="requests-table">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
-                        <TableHead>Ospite</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Totale</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {requestItems.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={5} className="text-center py-12 text-lake-ink/40 text-sm italic">
-                                Nessuna richiesta in attesa
-                            </TableCell>
+        <>
+            {/* ---- PC: tabella */}
+            <div className="hidden md:block bg-white border border-lake-border rounded-sm overflow-hidden" data-testid="requests-table">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50 uppercase text-[10px] font-bold">
+                            <TableHead>Ospite</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Totale</TableHead>
+                            <TableHead>Stato</TableHead>
+                            <TableHead className="text-right">Azioni</TableHead>
                         </TableRow>
-                    )}
-                    {requestItems.map((b) => {
-                        const deadline = b.status === "request" ? b.request_expires_at : b.payment_due_at;
-                        return (
+                    </TableHeader>
+                    <TableBody>
+                        {requestItems.length === 0 && (
+                            <TableRow><TableCell colSpan={5}><EmptyRow text="Nessuna richiesta in attesa" /></TableCell></TableRow>
+                        )}
+                        {requestItems.map((b) => (
                             <TableRow key={b.id} className="hover:bg-slate-50/50 align-top">
-                                <TableCell>
-                                    <button onClick={() => openDetail(b)} className="text-left">
-                                        <span className="font-bold text-lake-ink underline decoration-dotted underline-offset-4">{b.guest_name}</span>
-                                        <span className="block text-[11px] text-lake-ink/60">{b.guest_email}</span>
+                                <TableCell className="max-w-[260px]">
+                                    <button onClick={() => openDetail(b)} className="text-left block w-full">
+                                        <span className="block font-bold text-lake-ink underline decoration-dotted underline-offset-4 truncate">{b.guest_name}</span>
+                                        <span className="block text-[11px] text-lake-ink/60 truncate">{b.guest_email}</span>
                                         <span className="block text-[11px] text-lake-ink/60">{b.guest_phone}{b.contact_whatsapp ? " · WhatsApp ok" : ""}</span>
                                     </button>
-                                    {b.notes && <p className="mt-1 text-[11px] italic text-amber-800 max-w-xs">"{b.notes}"</p>}
+                                    {b.notes && <p className="mt-1 text-[11px] italic text-amber-800 line-clamp-2">"{b.notes}"</p>}
                                 </TableCell>
                                 <TableCell className="text-sm whitespace-nowrap">
                                     {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
-                                    <span className="block text-[11px] text-lake-ink/50">{b.adults} adulti, {b.children} bambini</span>
+                                    <span className="block text-[11px] text-lake-ink/50">{nights(b)} notti · {b.adults} adulti, {b.children} bambini</span>
                                 </TableCell>
-                                <TableCell className="text-sm font-bold text-lake-blue">
+                                <TableCell className="text-sm font-bold text-lake-blue whitespace-nowrap">
                                     €{b.total_price}
                                     <span className="block text-[10px] font-normal text-lake-ink/50">{b.is_refundable === false ? "Non rimborsabile" : "Rimborsabile"}</span>
                                 </TableCell>
-                                <TableCell>
-                                    <Badge className={`${statusColors[b.status]} border-none text-[10px] uppercase font-bold`}>{statusLabels[b.status]}</Badge>
-                                    <span className="mt-1 flex items-center gap-1 text-[11px] text-lake-ink/60" title={fmtItDateTime(deadline)}>
-                                        <Clock className="w-3 h-3" />
-                                        {b.status === "request" ? "Rispondi entro " : "Pagamento entro "}{timeLeft(deadline)}
-                                    </span>
-                                </TableCell>
+                                <TableCell className="space-y-1"><StatusBadge b={b} /><Deadline b={b} /></TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex flex-col items-end gap-1.5 text-[11px] font-bold">
                                         {b.status === "request" && (
-                                            <button onClick={() => requestActions.askApprove(b)} data-testid={`approve-${b.id}`} className="flex items-center gap-1 text-emerald-700 hover:underline">
-                                                <Check className="w-3.5 h-3.5" /> ACCETTA
-                                            </button>
+                                            <button onClick={() => requestActions.askApprove(b)} data-testid={`approve-${b.id}`} className="flex items-center gap-1 text-emerald-700 hover:underline"><Check className="w-3.5 h-3.5" /> ACCETTA</button>
                                         )}
-                                        <button onClick={() => requestActions.askReject(b)} data-testid={`reject-${b.id}`} className="flex items-center gap-1 text-rose-600 hover:underline">
-                                            <XCircle className="w-3.5 h-3.5" /> RIFIUTA
-                                        </button>
+                                        <button onClick={() => requestActions.askReject(b)} data-testid={`reject-${b.id}`} className="flex items-center gap-1 text-rose-600 hover:underline"><XCircle className="w-3.5 h-3.5" /> RIFIUTA</button>
                                         {b.guest_phone && (
-                                            <button onClick={() => requestActions.openWhatsapp(b)} className="flex items-center gap-1 text-green-700 hover:underline">
-                                                <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP
-                                            </button>
+                                            <button onClick={() => requestActions.openWhatsapp(b)} className="flex items-center gap-1 text-green-700 hover:underline"><MessageCircle className="w-3.5 h-3.5" /> WHATSAPP</button>
                                         )}
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-        </div>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* ---- telefono: schede */}
+            <div className="md:hidden space-y-3" data-testid="requests-cards">
+                {requestItems.length === 0 && <div className="bg-white border border-lake-border rounded-sm"><EmptyRow text="Nessuna richiesta in attesa" /></div>}
+                {requestItems.map((b) => (
+                    <div key={b.id} className="bg-white border border-lake-border rounded-sm p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                            <button onClick={() => openDetail(b)} className="text-left min-w-0">
+                                <span className="block font-bold text-lake-ink truncate underline decoration-dotted underline-offset-4">{b.guest_name}</span>
+                                <span className="block text-xs text-lake-ink/50 truncate">{b.guest_email}</span>
+                                <span className="block text-xs text-lake-ink/50">{b.guest_phone}{b.contact_whatsapp ? " · WhatsApp ok" : ""}</span>
+                            </button>
+                            <span className="text-right shrink-0">
+                                <span className="block text-base font-bold text-lake-blue">€{b.total_price}</span>
+                                <span className="block text-[10px] text-lake-ink/50">{b.is_refundable === false ? "Non rimborsabile" : "Rimborsabile"}</span>
+                            </span>
+                        </div>
+                        <div className="text-sm text-slate-600">
+                            {fmtItDate(b.check_in)} → {fmtItDate(b.check_out)}
+                            <span className="block text-xs text-lake-ink/50">{nights(b)} notti · {b.adults} adulti, {b.children} bambini</span>
+                        </div>
+                        {b.notes && <p className="text-xs italic text-amber-800 bg-amber-50 border border-amber-100 rounded-sm p-2">"{b.notes}"</p>}
+                        <div className="flex flex-wrap items-center gap-2"><StatusBadge b={b} /><Deadline b={b} /></div>
+                        <div className={`grid gap-2 pt-1 ${b.status === "request" ? "grid-cols-3" : "grid-cols-2"}`}>
+                            {b.status === "request" && (
+                                <Button size="sm" onClick={() => requestActions.askApprove(b)} className="bg-emerald-600 hover:bg-emerald-700 px-2"><Check className="w-4 h-4 mr-1" /> Accetta</Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => requestActions.askReject(b)} className="text-rose-600 border-rose-200 px-2"><XCircle className="w-4 h-4 mr-1" /> Rifiuta</Button>
+                            <Button size="sm" variant="outline" disabled={!b.guest_phone} onClick={() => requestActions.openWhatsapp(b)} className="text-green-700 border-green-200 px-2"><MessageCircle className="w-4 h-4 mr-1" /> WhatsApp</Button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </>
     );
 
     return (
-        <div className="p-10" data-testid="admin-bookings-page">
-            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
+        <div className="p-4 sm:p-10" data-testid="admin-bookings-page">
+            <div className="flex flex-col md:flex-row items-stretch md:items-end justify-between mb-6 sm:mb-8 gap-4">
                 <div>
                     <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
                     <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
                 </div>
-                <div className="flex gap-2">
-                <Link to="/admin/calendar" className="inline-flex items-center px-4 h-10 rounded-sm border border-lake-border text-sm text-lake-ink hover:bg-white">
+                <div className="grid grid-cols-2 sm:flex gap-2">
+                <Link to="/admin/calendar" className="inline-flex items-center justify-center px-4 h-10 rounded-sm border border-lake-border bg-white text-sm text-lake-ink hover:bg-slate-50">
                     <CalendarIcon className="mr-2 h-4 w-4" /> Calendario
                 </Link>
-                <Button onClick={() => { setErrorMessage(""); setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale", is_refundable: "true" }); setManualOpen(true); }} className="bg-lake-blue hover:bg-lake-blue/90">
-                    <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
+                <Button onClick={() => { setErrorMessage(""); setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale", is_refundable: "true" }); setManualOpen(true); }} className="h-10 bg-lake-blue hover:bg-lake-blue/90">
+                    <Plus className="mr-1.5 sm:mr-2 h-4 w-4" /> <span className="sm:hidden">Nuova</span><span className="hidden sm:inline">Nuova Prenotazione</span>
                 </Button>
                 </div>
             </div>
 
-            <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
-                <div className="relative flex-1 min-w-[250px]">
+            <div className="bg-white border border-lake-border p-3 sm:p-4 mb-6 rounded-sm flex flex-col lg:flex-row gap-3 lg:items-center">
+                <div className="relative flex-1 min-w-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lake-ink/40" />
                     <Input placeholder="Cerca per nome, email o ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-10" />
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-3 lg:flex gap-2">
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Stato" /></SelectTrigger>
+                        <SelectTrigger className="w-full lg:w-44 text-[11px] sm:text-xs h-10 px-2.5 sm:px-3"><SelectValue placeholder="Stato" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tutti gli stati</SelectItem>
-                            <SelectItem value="pending">In attesa</SelectItem>
+                            <SelectItem value="all">Stato: tutti</SelectItem>
+                            <SelectItem value="pending">In attesa pagamento</SelectItem>
                             <SelectItem value="confirmed">Confermate</SelectItem>
                             <SelectItem value="external">Esterne (Airbnb/Booking)</SelectItem>
                         </SelectContent>
                     </Select>
                     <Select value={filterPayment} onValueChange={setFilterPayment}>
-                        <SelectTrigger className="w-44 text-xs h-10"><SelectValue placeholder="Pagamento" /></SelectTrigger>
+                        <SelectTrigger className="w-full lg:w-44 text-[11px] sm:text-xs h-10 px-2.5 sm:px-3"><SelectValue placeholder="Pagamento" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tutti i pagamenti</SelectItem>
+                            <SelectItem value="all">Pagam.: tutti</SelectItem>
                             <SelectItem value="unpaid">Non pagato</SelectItem>
                             <SelectItem value="deposit_paid">Acconto pagato</SelectItem>
                             <SelectItem value="fully_paid">Saldato</SelectItem>
                         </SelectContent>
                     </Select>
                     <Select value={filterSource} onValueChange={setFilterSource}>
-                        <SelectTrigger className="w-32 text-xs h-10"><SelectValue placeholder="Fonte" /></SelectTrigger>
+                        <SelectTrigger className="w-full lg:w-36 text-[11px] sm:text-xs h-10 px-2.5 sm:px-3"><SelectValue placeholder="Fonte" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tutte le fonti</SelectItem>
+                            <SelectItem value="all">Fonte: tutte</SelectItem>
                             <SelectItem value="website">Sito Web</SelectItem>
                             <SelectItem value="manual">Manuale</SelectItem>
                             <SelectItem value="external">Esterne (Sync)</SelectItem>
@@ -477,18 +545,18 @@ export default function AdminBookings() {
             </div>
 
             <Tabs value={tab || "list"} onValueChange={setTab} className="w-full">
-                <TabsList className="mb-4">
+                <TabsList className="mb-4 grid grid-cols-3 w-full sm:inline-flex sm:w-auto">
                     <TabsTrigger value="requests" data-testid="tab-requests">
-                        <Inbox className="mr-2 h-4 w-4" /> Richieste
+                        <Inbox className="mr-2 h-4 w-4 hidden sm:block" /> Richieste
                         {openRequests > 0 && (
-                            <span className="ml-2 bg-sky-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{openRequests}</span>
+                            <span className="ml-1.5 bg-sky-600 text-white text-[10px] leading-4 font-bold px-1.5 rounded-full">{openRequests}</span>
                         )}
                     </TabsTrigger>
-                    <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
+                    <TabsTrigger value="list"><List className="mr-2 h-4 w-4 hidden sm:block" /> Lista</TabsTrigger>
                     <TabsTrigger value="archive">
-                        <Archive className="mr-2 h-4 w-4" /> Archivio
+                        <Archive className="mr-2 h-4 w-4 hidden sm:block" /> Archivio
                         {archivedItems.length > 0 && (
-                            <span className="ml-2 bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            <span className="ml-1.5 bg-rose-100 text-rose-700 text-[10px] leading-4 font-bold px-1.5 rounded-full">
                                 {archivedItems.length}
                             </span>
                         )}
@@ -508,8 +576,8 @@ export default function AdminBookings() {
                 </TabsContent>
 
                 <TabsContent value="archive">
-                    <div className="mb-4 flex items-center gap-2 text-sm text-lake-ink/60">
-                        <Archive className="w-4 h-4" />
+                    <div className="mb-4 flex items-start gap-2 text-sm text-lake-ink/60">
+                        <Archive className="w-4 h-4 mt-0.5 shrink-0" />
                         <span>Prenotazioni cancellate, richieste rifiutate e scadute vengono conservate per storico. Il rimborso delle cancellazioni va gestito su Stripe.</span>
                     </div>
                     <BookingsTable rows={archivedItems} showActions={false} />
