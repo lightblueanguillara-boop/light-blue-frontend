@@ -1,0 +1,14 @@
+# dipendenze e build
+node_modules/
+build/
+coverage/
+
+# variabili d'ambiente locali
+.env
+.env.local
+.env.*.local
+
+# log e file di sistema
+npm-debug.log*
+yarn-error.log*
+.DS_Store

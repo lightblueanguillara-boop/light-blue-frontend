@@ -6,6 +6,10 @@ import Home from "./pages/Home";
 import Booking from "./pages/Booking";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
+import Privacy from "./pages/legal/Privacy";
+import Cookie from "./pages/legal/Cookie";
+import Conditions from "./pages/legal/Conditions";
+import Unsubscribe from "./pages/Unsubscribe";
 
 import AdminLogin from "./pages/admin/Login";
 import AdminLayout from "./pages/admin/Layout";
@@ -15,7 +19,7 @@ import AdminInbox from "./pages/admin/Inbox";
 import AdminCRM from "./pages/admin/CRM";
 import AdminMarketing from "./pages/admin/Marketing";
 import AdminSettings from "./pages/admin/Settings";
-import AdminGallery from "./pages/admin/Gallery"; // Import della nuova pagina
+import AdminGallery from "./pages/admin/Gallery";
 
 function RequireAuth({ children }) {
     const token = localStorage.getItem("lv_admin_token");
@@ -33,6 +37,10 @@ function App() {
                     <Route path="/book" element={<Booking />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/cancel" element={<PaymentCancel />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/cookie" element={<Cookie />} />
+                    <Route path="/condizioni" element={<Conditions />} />
+                    <Route path="/disiscrizione" element={<Unsubscribe />} />
 
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route
@@ -48,9 +56,10 @@ function App() {
                         <Route path="inbox" element={<AdminInbox />} />
                         <Route path="crm" element={<AdminCRM />} />
                         <Route path="marketing" element={<AdminMarketing />} />
-                        <Route path="gallery" element={<AdminGallery />} /> {/* Nuova rotta */}
+                        <Route path="gallery" element={<AdminGallery />} />
                         <Route path="settings" element={<AdminSettings />} />
                     </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </BrowserRouter>
         </div>

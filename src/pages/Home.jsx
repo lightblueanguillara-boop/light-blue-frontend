@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { 
     Wifi, Car, Waves, UtensilsCrossed, Ship, 
-    Trees, Snowflake, Footprints, ImageIcon 
+    Trees, Snowflake, Footprints, ImageIcon, MapPin 
 } from "lucide-react";
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
@@ -17,7 +17,10 @@ import api from "../lib/api";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 
-const HERO = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Anguillara_Sabazia_dal_lago_%281%29.jpg/1920px-Anguillara_Sabazia_dal_lago_%281%29.jpg";
+// Foto: "Anguillara Sabazia dal lago" di Albarubescens, CC BY-SA 4.0 (credito nel footer)
+const HERO = "/img/hero-anguillara.jpg";
+const MAP_EMBED = "https://www.openstreetmap.org/export/embed.html?bbox=12.26714998483658%2C42.0921838870187%2C12.2703418135643%2C42.093511456304455&layer=mapnik&marker=42.092846679955606%2C12.26874589920044";
+const MAP_LINK = "https://www.openstreetmap.org/?mlat=42.092847&mlon=12.268746#map=18/42.092847/12.268746";
 
 const services = [
     { icon: Wifi, title: "Wi-Fi", desc: "Connessione veloce in tutto l'appartamento." },
@@ -33,7 +36,10 @@ const services = [
 export default function Home() {
     const [info, setInfo] = useState(null);
     const [images, setImages] = useState([]);
-    const [form, setForm] = useState({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
+    const EMPTY_FORM = { name: "", email: "", phone: "", message: "", consent_newsletter: false, website: "" };
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [showMap, setShowMap] = useState(false);
+    const [galleryLoaded, setGalleryLoaded] = useState(false);
     const [sending, setSending] = useState(false);
     
     // Stato per gestire l'apertura della galleria
@@ -47,7 +53,8 @@ export default function Home() {
                 const data = Array.isArray(r) ? r : (r?.data || []);
                 setImages(data);
             })
-            .catch((err) => console.error("Errore gallery:", err));
+            .catch(() => {})
+            .finally(() => setGalleryLoaded(true));
     }, []);
 
     const submit = async (e) => {
@@ -56,7 +63,7 @@ export default function Home() {
         try {
             await api.post("/contact", form);
             toast.success("Messaggio inviato. Ti risponderemo al più presto.");
-            setForm({ name: "", email: "", phone: "", message: "", consent_newsletter: false });
+            setForm(EMPTY_FORM);
         } catch {
             toast.error("Errore durante l'invio. Riprova.");
         } finally {
@@ -122,7 +129,7 @@ export default function Home() {
                 {images.length === 0 ? (
                     <div className="py-20 text-center border border-dashed border-lake-border rounded-sm bg-lake-sand/10">
                         <ImageIcon className="mx-auto text-lake-ink/20 mb-4" size={48} strokeWidth={1} />
-                        <p className="text-lake-ink/50 italic font-light">Caricamento della galleria...</p>
+                        <p className="text-lake-ink/50 italic font-light">{galleryLoaded ? "Le foto saranno disponibili a breve." : "Caricamento della galleria..."}</p>
                     </div>
                 ) : (
                     <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
@@ -183,12 +190,31 @@ export default function Home() {
                         <p><span className="font-semibold uppercase mr-2 text-lake-blue">Email:</span> {info?.email}</p>
                     </div>
                 </div>
-                <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner">
-                    <iframe
-                        title="Mappa"
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=12.26714998483658%2C42.0921838870187%2C12.2703418135643%2C42.093511456304455&layer=mapnik&marker=42.092846679955606%2C12.26874589920044"
-                        className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
-                    />
+                <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner bg-white">
+                    {/* La mappa (servizio esterno OpenStreetMap) si carica solo su richiesta del visitatore */}
+                    {showMap ? (
+                        <iframe
+                            title="Mappa"
+                            src={MAP_EMBED}
+                            className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
+                        />
+                    ) : (
+                        <div className="w-full h-full grid place-items-center p-8 text-center bg-lake-sand/10">
+                            <div className="max-w-xs space-y-4">
+                                <MapPin className="mx-auto text-lake-blue" size={36} strokeWidth={1.2} />
+                                <p className="text-sm text-lake-ink/70">
+                                    La mappa è fornita da OpenStreetMap. Caricandola, il tuo indirizzo IP viene trasmesso a OpenStreetMap Foundation.{" "}
+                                    <Link to="/privacy" className="underline">Informativa privacy</Link>
+                                </p>
+                                <button type="button" onClick={() => setShowMap(true)} className="px-5 py-2.5 rounded-sm bg-lake-blue text-white text-sm hover:bg-lake-ink transition-colors">
+                                    Mostra mappa
+                                </button>
+                                <a href={MAP_LINK} target="_blank" rel="noopener noreferrer" className="block text-xs text-lake-blue underline">
+                                    Apri in una nuova scheda
+                                </a>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -208,10 +234,15 @@ export default function Home() {
                     <Input placeholder="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input placeholder="Telefono (opzionale)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="md:col-span-2" />
                     <Textarea placeholder="Il tuo messaggio" required rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="md:col-span-2" />
+                    {/* Campo trappola anti-spam: invisibile alle persone, i bot lo compilano */}
+                    <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
                     <label className="md:col-span-2 flex items-start gap-3 text-sm text-lake-ink/70">
                         <Checkbox checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
-                        <span>Acconsento al trattamento dati GDPR.</span>
+                        <span>Desidero ricevere via email offerte e novità di Light Blue (facoltativo, revocabile in qualsiasi momento).</span>
                     </label>
+                    <p className="md:col-span-2 text-xs text-lake-ink/60">
+                        I dati inviati sono usati solo per rispondere alla tua richiesta, come descritto nell'<Link to="/privacy" className="underline">Informativa privacy</Link>.
+                    </p>
                     <button type="submit" disabled={sending} className="md:col-span-2 w-full py-4 rounded-sm bg-lake-blue text-white text-sm font-medium hover:bg-lake-ink transition-colors">
                         {sending ? "Invio..." : "Invia messaggio"}
                     </button>

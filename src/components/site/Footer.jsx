@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 
 export default function Footer() {
@@ -38,10 +39,21 @@ export default function Footer() {
                     {info?.name || "Light Blue"}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white/50">
-                    {info?.cir && <p data-testid="footer-cir">CIR · {info.cir}</p>}
+                    {info?.cir && <p data-testid="footer-cir">CIN · {info.cir}</p>}
+                    {info?.legal_owner_name && <p>{info.legal_owner_name}{info?.legal_owner_tax_id ? ` · ${info.legal_owner_tax_id}` : ""}</p>}
                     {info?.lake && <p>{info.lake}</p>}
                     <p>© {new Date().getFullYear()} · Tutti i diritti riservati</p>
                 </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white/50">
+                    <Link to="/privacy" className="underline underline-offset-4 hover:text-white">Informativa privacy</Link>
+                    <Link to="/cookie" className="underline underline-offset-4 hover:text-white">Cookie policy</Link>
+                    <Link to="/condizioni" className="underline underline-offset-4 hover:text-white">Condizioni di prenotazione</Link>
+                </div>
+                <p className="mt-6 text-[11px] text-white/35">
+                    Foto di copertina: "Anguillara Sabazia dal lago" di Albarubescens,{" "}
+                    <a href="https://commons.wikimedia.org/wiki/File:Anguillara_Sabazia_dal_lago_(1).jpg" target="_blank" rel="noopener noreferrer" className="underline">Wikimedia Commons</a>,{" "}
+                    <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener noreferrer" className="underline">CC BY-SA 4.0</a>.
+                </p>
             </div>
         </footer>
     );

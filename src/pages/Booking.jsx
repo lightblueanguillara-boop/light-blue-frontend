@@ -3,7 +3,7 @@ import { DayPicker } from "react-day-picker";
 import { it } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
 import { Input } from "../components/ui/input";
@@ -26,6 +26,7 @@ export default function Booking() {
     });
     
     const [blocked, setBlocked] = useState([]);
+    const [touristTax, setTouristTax] = useState("");
     const [quote, setQuote] = useState(null);
     const [isRefundable, setIsRefundable] = useState(true);
     const [paymentChoice] = useState("full");
@@ -39,6 +40,7 @@ export default function Booking() {
         notes: "",
         consent_newsletter: false,
     });
+    const [acceptTerms, setAcceptTerms] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -47,6 +49,10 @@ export default function Booking() {
         const handleResize = () => setIsMobile(window.innerWidth < 1024);
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    useEffect(() => {
+        api.get("/villa/info").then((r) => setTouristTax(r.data.tourist_tax_note || "")).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -66,7 +72,7 @@ export default function Booking() {
         }
     }, [range]);
 
-    const canSubmit = quote?.available && form.guest_name && form.guest_email && range?.from && range?.to;
+    const canSubmit = quote?.available && acceptTerms && form.guest_name && form.guest_email && range?.from && range?.to;
 
     const submit = async (e) => {
         e.preventDefault();
@@ -79,6 +85,7 @@ export default function Booking() {
                 check_out: fmt(range.to),
                 payment_choice: "full",
                 is_refundable: isRefundable,
+                accept_terms: acceptTerms,
                 origin_url: window.location.origin,
             });
             window.location.href = r.data.url;
@@ -241,6 +248,7 @@ export default function Booking() {
                                             <span className="text-xl font-display text-lake-blue">€{displayPrice}</span>
                                         </div>
                                         {!quote.available && <p className="text-red-600 text-xs mt-2 font-bold italic">Date non disponibili.</p>}
+                                        {touristTax && <p className="text-[11px] text-lake-ink/60 mt-2">{touristTax}</p>}
                                     </div>
                                 ) : null}
                             </div>
@@ -251,9 +259,18 @@ export default function Booking() {
 
                     <div className="space-y-4">
                         <label className="flex items-start gap-3 text-[11px] text-lake-ink/70 cursor-pointer">
-                            <Checkbox data-testid="book-consent" checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
-                            <span>Desidero ricevere offerte speciali e aggiornamenti (GDPR).</span>
+                            <Checkbox data-testid="book-terms" checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(!!v)} />
+                            <span>
+                                Ho letto e accetto le <Link to="/condizioni" target="_blank" className="underline">Condizioni di prenotazione</Link>, inclusa la politica di cancellazione della tariffa scelta. <span className="text-red-600">*</span>
+                            </span>
                         </label>
+                        <label className="flex items-start gap-3 text-[11px] text-lake-ink/70 cursor-pointer">
+                            <Checkbox data-testid="book-consent" checked={form.consent_newsletter} onCheckedChange={(v) => setForm({ ...form, consent_newsletter: !!v })} />
+                            <span>Desidero ricevere via email offerte e novità (facoltativo, revocabile in qualsiasi momento).</span>
+                        </label>
+                        <p className="text-[11px] text-lake-ink/60">
+                            I tuoi dati sono trattati per gestire la prenotazione come descritto nell'<Link to="/privacy" target="_blank" className="underline">Informativa privacy</Link>.
+                        </p>
 
                         <button type="submit" disabled={!canSubmit || submitting} data-testid="book-submit" className="w-full py-4 rounded-sm bg-lake-blue text-white text-sm hover:bg-lake-ink transition-all disabled:opacity-50 font-bold uppercase tracking-widest shadow-sm">
                             {submitting ? "Reindirizzamento..." : `Conferma e Paga · €${displayPrice || ""}`}

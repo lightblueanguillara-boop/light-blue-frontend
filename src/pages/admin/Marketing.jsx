@@ -79,9 +79,6 @@ export default function AdminMarketing() {
                 recipients: recipientsSnapshot,  // lista esatta selezionata
             };
 
-            // Verifica di sicurezza: log prima dell'invio
-            console.log(`[Marketing] Invio a ${recipientsSnapshot.length} destinatari:`, recipientsSnapshot);
-
             const r = await api.post("/admin/marketing/send", payload);
 
             if (r.data.failed > 0) {
@@ -90,10 +87,13 @@ export default function AdminMarketing() {
                 toast.success(`Email inviata con successo a ${r.data.sent} destinatar${r.data.sent === 1 ? 'io' : 'i'}!`);
             }
             
+            if (r.data.skipped > 0) {
+                toast.info(`${r.data.skipped} indirizzi esclusi perché non iscritti o disiscritti.`);
+            }
+
             loadData(); // Ricarica lo storico
         } catch (e) {
-            toast.error("Errore durante l'invio");
-            console.error("[Marketing] Errore invio:", e);
+            toast.error(typeof e?.response?.data?.detail === "string" ? e.response.data.detail : "Errore durante l'invio");
         } finally {
             setSending(false);
         }

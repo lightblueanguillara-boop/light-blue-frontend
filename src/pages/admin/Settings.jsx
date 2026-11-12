@@ -12,6 +12,22 @@ export default function AdminSettings() {
     const [s, setS] = useState(null);
     const [saving, setSaving] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [pwd, setPwd] = useState({ current: "", next: "", confirm: "" });
+    const [pwdSaving, setPwdSaving] = useState(false);
+
+    const changePassword = async () => {
+        if (pwd.next.length < 12) { toast.error("La nuova password deve avere almeno 12 caratteri"); return; }
+        if (pwd.next !== pwd.confirm) { toast.error("Le due password non coincidono"); return; }
+        setPwdSaving(true);
+        try {
+            const r = await api.post("/admin/password", { current_password: pwd.current, new_password: pwd.next });
+            if (r.data?.token) localStorage.setItem("lv_admin_token", r.data.token);
+            toast.success("Password aggiornata");
+            setPwd({ current: "", next: "", confirm: "" });
+        } catch (e) {
+            toast.error(e?.response?.data?.detail || "Errore nel cambio password");
+        } finally { setPwdSaving(false); }
+    };
 
     useEffect(() => { api.get("/admin/settings").then((r) => setS(r.data)); }, []);
 
@@ -62,8 +78,19 @@ export default function AdminSettings() {
                 <div><Label>Telefono</Label><Input data-testid="s-villa-phone" value={s.villa_phone || ""} onChange={(e) => update({ villa_phone: e.target.value })} /></div>
                 <div><Label>Indirizzo</Label><Input data-testid="s-villa-address" value={s.villa_address || ""} onChange={(e) => update({ villa_address: e.target.value })} /></div>
                 <div><Label>Lago / Località</Label><Input data-testid="s-villa-lake" value={s.villa_lake || ""} onChange={(e) => update({ villa_lake: e.target.value })} /></div>
-                <div><Label>Codice CIR</Label><Input data-testid="s-villa-cir" value={s.villa_cir || ""} onChange={(e) => update({ villa_cir: e.target.value })} /></div>
+                <div><Label>Codice CIN (Codice Identificativo Nazionale)</Label><Input data-testid="s-villa-cir" value={s.villa_cir || ""} onChange={(e) => update({ villa_cir: e.target.value })} /></div>
                 <div className="md:col-span-2"><Label>Descrizione</Label><Textarea rows={4} data-testid="s-villa-desc" value={s.villa_description || ""} onChange={(e) => update({ villa_description: e.target.value })} /></div>
+            </div>
+
+            <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-2 gap-5" data-testid="s-legal">
+                <div className="md:col-span-2">
+                    <p className="font-display text-xl text-lake-ink">Dati legali (privacy e condizioni)</p>
+                    <p className="text-sm text-lake-ink/60 mt-1">Compaiono nell'Informativa privacy, nelle Condizioni di prenotazione e nel footer. Il titolare è la persona o la società che gestisce l'affitto.</p>
+                </div>
+                <div><Label>Titolare (nome e cognome o ragione sociale)</Label><Input data-testid="s-legal-owner" value={s.legal_owner_name || ""} onChange={(e) => update({ legal_owner_name: e.target.value })} /></div>
+                <div><Label>Codice fiscale o Partita IVA</Label><Input data-testid="s-legal-taxid" value={s.legal_owner_tax_id || ""} onChange={(e) => update({ legal_owner_tax_id: e.target.value })} /></div>
+                <div className="md:col-span-2"><Label>Indirizzo del titolare (residenza o sede)</Label><Input data-testid="s-legal-address" value={s.legal_owner_address || ""} onChange={(e) => update({ legal_owner_address: e.target.value })} /></div>
+                <div className="md:col-span-2"><Label>Imposta di soggiorno (testo mostrato agli ospiti, vuoto se non prevista)</Label><Textarea rows={2} data-testid="s-legal-tourist-tax" placeholder="Es.: Imposta di soggiorno di € X a persona per notte, da pagare in loco. Esenti i minori di 10 anni." value={s.tourist_tax_note || ""} onChange={(e) => update({ tourist_tax_note: e.target.value })} /></div>
             </div>
 
             <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-3 gap-5">
@@ -167,14 +194,29 @@ export default function AdminSettings() {
                     >Copia</button>
                 </div>
                 <p className="text-xs text-lake-ink/60 leading-relaxed">
-                    Eventi da abilitare: <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">checkout.session.completed</code>, <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">checkout.session.async_payment_succeeded</code>.
-                    Una volta creato, copia il <strong>Signing secret</strong> (whsec_...) e impostalo nel file <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">backend/.env</code> come <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">STRIPE_WEBHOOK_SECRET</code>, poi riavvia il backend. In assenza del secret il sistema usa polling come fallback (già funzionante).
+                    Eventi da abilitare: <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">checkout.session.completed</code>, <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">checkout.session.async_payment_succeeded</code>, <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">checkout.session.expired</code>.
+                    Una volta creato, copia il <strong>Signing secret</strong> (whsec_...) e impostalo nelle variabili del servizio backend su Railway come <code className="bg-lake-cream px-1.5 py-0.5 rounded-sm">STRIPE_WEBHOOK_SECRET</code>. Senza il secret il webhook rifiuta le richieste e le conferme arrivano solo tramite la verifica dalla pagina di ritorno.
                 </p>
             </div>
 
             <button onClick={save} disabled={saving} data-testid="save-settings-btn" className="px-8 py-3.5 rounded-sm bg-lake-blue text-white text-sm disabled:opacity-50">
                 {saving ? "Salvataggio..." : "Salva impostazioni"}
             </button>
+
+            <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-3 gap-5" data-testid="settings-password">
+                <div className="md:col-span-3">
+                    <p className="font-display text-xl text-lake-ink">Cambia password</p>
+                    <p className="text-sm text-lake-ink/60 mt-1">Minimo 12 caratteri. Dopo il cambio, le sessioni aperte su altri dispositivi vengono chiuse.</p>
+                </div>
+                <div><Label>Password attuale</Label><Input type="password" autoComplete="current-password" value={pwd.current} onChange={(e) => setPwd({ ...pwd, current: e.target.value })} /></div>
+                <div><Label>Nuova password</Label><Input type="password" autoComplete="new-password" value={pwd.next} onChange={(e) => setPwd({ ...pwd, next: e.target.value })} /></div>
+                <div><Label>Ripeti nuova password</Label><Input type="password" autoComplete="new-password" value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} /></div>
+                <div className="md:col-span-3">
+                    <button onClick={changePassword} disabled={pwdSaving || !pwd.current || !pwd.next} data-testid="change-password-btn" className="px-6 py-3 rounded-sm border border-lake-blue text-lake-blue text-sm disabled:opacity-50">
+                        {pwdSaving ? "Aggiornamento..." : "Aggiorna password"}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
