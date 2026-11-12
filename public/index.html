@@ -17,6 +17,49 @@
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Light Blue" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <!-- Schermate di avvio iPhone/iPad: logo su blu acqua (senza, iOS mostra uno schermo bianco) -->
+        <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-640x1136.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-750x1334.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-828x1792.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1125x2436.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1170x2532.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1179x2556.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1206x2622.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1242x2208.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1242x2688.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1284x2778.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1290x2796.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1320x2868.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1488x2266.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1536x2048.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1640x2360.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1668x2224.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-1668x2388.png" />
+        <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%REACT_APP_BACKEND_URL%/api/brand/splash-2048x2732.png" />
+
+        <!-- Schermata d'ingresso dell'app: visibile subito, prima che il codice sia caricato -->
+        <style>
+            #app-splash { display: none; position: fixed; inset: 0; z-index: 2147483647; background: #2FA4C7;
+                align-items: center; justify-content: center; transition: opacity .4s ease; }
+            html.app-standalone, html.app-standalone body { background: #2FA4C7; }
+            html.app-standalone #app-splash { display: flex; }
+            #app-splash img { width: 30vmin; height: 30vmin; border-radius: 50%; transition: transform .4s ease; }
+            #app-splash.pulse img { animation: app-splash-pulse .6s ease-in-out; }
+            #app-splash.exit { opacity: 0; }
+            #app-splash.exit img { transform: scale(1.25); }
+            @keyframes app-splash-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+            @media (prefers-reduced-motion: reduce) { #app-splash.pulse img { animation: none; } #app-splash img { transition: none; } }
+        </style>
+        <script>
+            // Solo quando il pannello è aperto come app installata (o con ?splash=1 per le prove)
+            (function () {
+                var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+                var force = /[?&]splash=1/.test(location.search);
+                if ((standalone && location.pathname.indexOf("/admin") === 0) || force) {
+                    document.documentElement.classList.add("app-standalone");
+                }
+            })();
+        </script>
 
         <!-- Anteprima dei link su WhatsApp, Facebook, Telegram (immagine da Impostazioni) -->
         <meta property="og:type" content="website" />
@@ -35,6 +78,7 @@
     </head>
     <body>
         <noscript>Per usare questo sito è necessario abilitare JavaScript.</noscript>
+        <div id="app-splash" aria-hidden="true"><img src="%REACT_APP_BACKEND_URL%/api/brand/logo-512.png" alt="" /></div>
         <div id="root"></div>
     </body>
 </html>

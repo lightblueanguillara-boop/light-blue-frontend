@@ -1,6 +1,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
+import AppSplash from "./components/AppSplash";
 
 import Home from "./pages/Home";
 import Booking from "./pages/Booking";
@@ -31,6 +32,7 @@ function RequireAuth({ children }) {
 function App() {
     return (
         <div className="App">
+            <AppSplash />
             <Toaster position="top-right" richColors />
             <BrowserRouter>
                 <Routes>

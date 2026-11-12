@@ -5,7 +5,15 @@ export const API = `${BACKEND_URL}/api`;
 
 export const api = axios.create({ baseURL: API });
 
+// Conteggio delle richieste in corso: la schermata d'ingresso dell'app attende che i dati siano arrivati
+let pending = 0;
+const idleListeners = new Set();
+const done = () => { pending = Math.max(0, pending - 1); if (pending === 0) idleListeners.forEach((fn) => fn()); };
+export const pendingRequests = () => pending;
+export function onRequestsIdle(fn) { idleListeners.add(fn); return () => idleListeners.delete(fn); }
+
 api.interceptors.request.use((config) => {
+    pending += 1;
     const token = localStorage.getItem('lv_admin_token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
@@ -13,8 +21,9 @@ api.interceptors.request.use((config) => {
 
 // Sessione admin scaduta o revocata (es. dopo un cambio password): torna al login.
 api.interceptors.response.use(
-    (r) => r,
+    (r) => { done(); return r; },
     (error) => {
+        done();
         const status = error?.response?.status;
         const url = error?.config?.url || '';
         const hadToken = !!localStorage.getItem('lv_admin_token');

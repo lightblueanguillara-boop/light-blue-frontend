@@ -619,8 +619,10 @@ export default function AdminBookings() {
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
                 <DialogContent className="sm:max-w-[550px] border-t-4 border-t-lake-blue">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-display text-lake-ink">Scheda Dettagliata</DialogTitle>
-                        <DialogDescription>Informazioni complete sulla prenotazione e dati tecnici.</DialogDescription>
+                        <DialogTitle className="text-2xl font-display text-lake-ink">Scheda prenotazione</DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="pt-1">{selectedBooking && <StatusBadge b={selectedBooking} />}{selectedBooking && REQUEST_STATES.includes(selectedBooking.status) && <span className="ml-2 inline-block align-middle"><Deadline b={selectedBooking} /></span>}</div>
+                        </DialogDescription>
                     </DialogHeader>
                     {selectedBooking && (
                         <div className="space-y-6 py-4">
@@ -648,7 +650,7 @@ export default function AdminBookings() {
                                 <div className="text-right">
                                     <Label className="text-[10px] uppercase text-slate-400 font-bold">Totale</Label>
                                     <p className="font-bold text-2xl text-lake-blue">€{selectedBooking.total_price}</p>
-                                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{selectedBooking.payment_status}</p>
+                                    <p className="text-[11px] text-slate-500 font-semibold">{paymentLabels[selectedBooking.payment_status] || selectedBooking.payment_status}</p>
                                 </div>
                             </div>
                             {selectedBooking.notes && (
@@ -671,7 +673,16 @@ export default function AdminBookings() {
                             </div>
                         </div>
                     )}
-                    <DialogFooter className="gap-2 sm:gap-0">
+                    <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
+                        {selectedBooking?.status === "request" && (
+                            <>
+                                <Button onClick={() => { setDetailOpen(false); requestActions.askApprove(selectedBooking); }} className="bg-emerald-600 hover:bg-emerald-700" data-testid="detail-approve"><Check className="w-4 h-4 mr-1.5" /> Accetta</Button>
+                                <Button variant="outline" onClick={() => { setDetailOpen(false); requestActions.askReject(selectedBooking); }} className="text-rose-600 border-rose-200" data-testid="detail-reject"><XCircle className="w-4 h-4 mr-1.5" /> Rifiuta</Button>
+                            </>
+                        )}
+                        {selectedBooking?.status === "awaiting_payment" && (
+                            <Button variant="outline" onClick={() => { setDetailOpen(false); requestActions.askReject(selectedBooking); }} className="text-rose-600 border-rose-200"><XCircle className="w-4 h-4 mr-1.5" /> Annulla richiesta</Button>
+                        )}
                         {selectedBooking?.guest_phone && (
                             <Button variant="outline" onClick={() => { setDetailOpen(false); requestActions.openWhatsapp(selectedBooking); }} className="text-green-700 border-green-200">
                                 <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp

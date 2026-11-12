@@ -16,8 +16,9 @@ const manifest = {
     scope: "/admin",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#FAF9F6",
-    theme_color: "#2A333C",
+    // schermata d'ingresso blu acqua (stesso colore di public/index.html e del backend)
+    background_color: "#2FA4C7",
+    theme_color: "#2FA4C7",
     icons: [
         icon("logo-192.png", "192x192", "any"),
         icon("logo-512.png", "512x512", "any"),
