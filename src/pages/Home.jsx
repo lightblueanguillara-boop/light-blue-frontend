@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { 
     Wifi, Car, Waves, UtensilsCrossed, Ship, 
-    Trees, Snowflake, Footprints, ImageIcon, MapPin 
+    Trees, Snowflake, Footprints, ImageIcon 
 } from "lucide-react";
 import Header from "../components/site/Header";
 import Footer from "../components/site/Footer";
@@ -38,7 +38,6 @@ export default function Home() {
     const [images, setImages] = useState([]);
     const EMPTY_FORM = { name: "", email: "", phone: "", message: "", consent_newsletter: false, website: "" };
     const [form, setForm] = useState(EMPTY_FORM);
-    const [showMap, setShowMap] = useState(false);
     const [galleryLoaded, setGalleryLoaded] = useState(false);
     const [sending, setSending] = useState(false);
     
@@ -190,31 +189,23 @@ export default function Home() {
                         <p><span className="font-semibold uppercase mr-2 text-lake-blue">Email:</span> {info?.email}</p>
                     </div>
                 </div>
-                <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner bg-white">
-                    {/* La mappa (servizio esterno OpenStreetMap) si carica solo su richiesta del visitatore */}
-                    {showMap ? (
+                <div>
+                    <div className="aspect-[4/3] w-full rounded-sm overflow-hidden border border-lake-border shadow-inner bg-white">
                         <iframe
                             title="Mappa"
                             src={MAP_EMBED}
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
                             className="w-full h-full grayscale hover:grayscale-0 transition-all duration-700"
                         />
-                    ) : (
-                        <div className="w-full h-full grid place-items-center p-8 text-center bg-lake-sand/10">
-                            <div className="max-w-xs space-y-4">
-                                <MapPin className="mx-auto text-lake-blue" size={36} strokeWidth={1.2} />
-                                <p className="text-sm text-lake-ink/70">
-                                    La mappa è fornita da OpenStreetMap. Caricandola, il tuo indirizzo IP viene trasmesso a OpenStreetMap Foundation.{" "}
-                                    <Link to="/privacy" className="underline">Informativa privacy</Link>
-                                </p>
-                                <button type="button" onClick={() => setShowMap(true)} className="px-5 py-2.5 rounded-sm bg-lake-blue text-white text-sm hover:bg-lake-ink transition-colors">
-                                    Mostra mappa
-                                </button>
-                                <a href={MAP_LINK} target="_blank" rel="noopener noreferrer" className="block text-xs text-lake-blue underline">
-                                    Apri in una nuova scheda
-                                </a>
-                            </div>
-                        </div>
-                    )}
+                    </div>
+                    <p className="mt-3 text-xs text-lake-ink/60 leading-relaxed" data-testid="map-privacy-note">
+                        Mappa fornita da OpenStreetMap: per visualizzarla il tuo browser si collega ai server di
+                        OpenStreetMap Foundation, che ricevono il tuo indirizzo IP.{" "}
+                        <Link to="/privacy" className="underline">Informativa privacy</Link>
+                        {" · "}
+                        <a href={MAP_LINK} target="_blank" rel="noopener noreferrer" className="underline">Apri la mappa</a>
+                    </p>
                 </div>
             </section>
 

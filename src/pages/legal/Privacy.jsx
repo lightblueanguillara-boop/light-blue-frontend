@@ -62,8 +62,12 @@ export default function Privacy() {
                 <li><strong>Resend (Plus Five Five, Inc.)</strong>: invio delle email transazionali e della newsletter.</li>
                 <li><strong>Cloudinary Ltd.</strong>: archiviazione e distribuzione delle foto del sito.</li>
                 <li>
-                    <strong>OpenStreetMap Foundation</strong>: solo se scegli di caricare la mappa nella pagina
-                    principale, il tuo indirizzo IP viene trasmesso a OpenStreetMap per mostrare la mappa.
+                    <strong>OpenStreetMap Foundation</strong> (Regno Unito): la mappa nella pagina principale viene
+                    caricata dai server di OpenStreetMap, che ricevono il tuo indirizzo IP e i dati tecnici del browser
+                    per mostrarla. Base giuridica: legittimo interesse a indicare ai visitatori la posizione
+                    dell'alloggio (art. 6.1.f GDPR). Il Regno Unito beneficia di una decisione di adeguatezza della
+                    Commissione europea. Puoi opporti a questo trattamento in qualsiasi momento, ad esempio
+                    bloccando i contenuti esterni nel browser.
                 </li>
             </ul>
             <p>

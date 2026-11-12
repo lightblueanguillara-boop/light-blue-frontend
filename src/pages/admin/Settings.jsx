@@ -16,7 +16,7 @@ export default function AdminSettings() {
     const [pwdSaving, setPwdSaving] = useState(false);
 
     const changePassword = async () => {
-        if (pwd.next.length < 12) { toast.error("La nuova password deve avere almeno 12 caratteri"); return; }
+        if (pwd.next.length < 10) { toast.error("La nuova password deve avere almeno 10 caratteri"); return; }
         if (pwd.next !== pwd.confirm) { toast.error("Le due password non coincidono"); return; }
         setPwdSaving(true);
         try {
@@ -206,7 +206,7 @@ export default function AdminSettings() {
             <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-3 gap-5" data-testid="settings-password">
                 <div className="md:col-span-3">
                     <p className="font-display text-xl text-lake-ink">Cambia password</p>
-                    <p className="text-sm text-lake-ink/60 mt-1">Minimo 12 caratteri. Dopo il cambio, le sessioni aperte su altri dispositivi vengono chiuse.</p>
+                    <p className="text-sm text-lake-ink/60 mt-1">Minimo 10 caratteri. Dopo il cambio, le sessioni aperte su altri dispositivi vengono chiuse.</p>
                 </div>
                 <div><Label>Password attuale</Label><Input type="password" autoComplete="current-password" value={pwd.current} onChange={(e) => setPwd({ ...pwd, current: e.target.value })} /></div>
                 <div><Label>Nuova password</Label><Input type="password" autoComplete="new-password" value={pwd.next} onChange={(e) => setPwd({ ...pwd, next: e.target.value })} /></div>

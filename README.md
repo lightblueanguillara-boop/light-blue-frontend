@@ -25,6 +25,6 @@ npx serve -s build
 ## Privacy
 
 Il sito non carica risorse da servizi esterni all'avvio: font e immagine di copertina sono ospitati dal sito,
-non ci sono strumenti di analisi o tracciamento. La mappa OpenStreetMap si carica solo su richiesta del visitatore.
+non ci sono strumenti di analisi o tracciamento. Unica eccezione: la mappa OpenStreetMap nella home (dichiarata nell'Informativa privacy e con avviso sotto la mappa).
 Prima di aggiungere script o servizi di terze parti, aggiornare Informativa privacy e Cookie policy
 (`src/pages/legal/`) e valutare la necessità di un banner di consenso.

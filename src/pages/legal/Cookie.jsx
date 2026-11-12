@@ -26,15 +26,17 @@ export default function Cookie() {
                 </li>
             </ul>
 
-            <h2>Servizi esterni attivati solo da una tua azione</h2>
+            <h2>Servizi esterni</h2>
             <ul>
                 <li>
-                    <strong>Pagamento con Stripe</strong>: quando confermi una prenotazione vieni indirizzato alla pagina di
+                    <strong>Pagamento con Stripe</strong> (solo su tua azione): quando confermi una prenotazione vieni indirizzato alla pagina di
                     pagamento di Stripe, che può usare propri cookie tecnici e antifrode. Si applica la{" "}
                     <a href="https://stripe.com/it/privacy" target="_blank" rel="noopener noreferrer">privacy policy di Stripe</a>.
                 </li>
                 <li>
-                    <strong>Mappa OpenStreetMap</strong>: viene caricata solo se premi "Mostra mappa". Si applica la{" "}
+                    <strong>Mappa OpenStreetMap</strong>: la mappa nella pagina principale è caricata dai server di
+                    OpenStreetMap, che ricevono il tuo indirizzo IP; secondo quanto dichiarato da OpenStreetMap non
+                    vengono usati cookie di profilazione. Si applica la{" "}
                     <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">privacy policy di OpenStreetMap Foundation</a>.
                 </li>
             </ul>
