@@ -53,10 +53,11 @@ export default function AdminGallery() {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="p-4 sm:p-10 space-y-6 sm:space-y-8" data-testid="admin-gallery-page">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="font-display text-3xl text-lake-ink uppercase tracking-wider">Media & Galleria</h1>
+                    <p className="overline">Media</p>
+                    <h1 className="font-display text-3xl sm:text-4xl text-lake-ink mt-2">Galleria foto</h1>
                     <p className="text-lake-ink/60 mt-2 font-light">Gestisci le immagini del sito e della galleria fotografica.</p>
                 </div>
                 
@@ -78,7 +79,7 @@ export default function AdminGallery() {
                     <p className="text-lake-ink/50 font-light italic">Nessuna immagine presente nella galleria.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                     {images.map((img) => (
                         <div key={img.id || img._id} className="group relative bg-white border border-lake-border rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <div className="aspect-video overflow-hidden bg-lake-sand">

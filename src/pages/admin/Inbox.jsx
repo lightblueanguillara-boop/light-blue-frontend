@@ -27,13 +27,13 @@ function ReplyModal({ msg, onClose, onSent }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-sm border border-lake-border w-full max-w-2xl shadow-xl">
-                <div className="p-6 border-b border-lake-border flex justify-between items-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4">
+            <div className="bg-white rounded-t-lg sm:rounded-sm border border-lake-border w-full max-w-2xl shadow-xl max-h-[92dvh] overflow-y-auto">
+                <div className="p-4 sm:p-6 border-b border-lake-border flex justify-between items-center">
                     <h3 className="font-display text-lg text-lake-ink">Rispondi a {msg.name}</h3>
                     <button onClick={onClose} className="text-lake-ink/40 hover:text-lake-ink">✕</button>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-4">
                     <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-widest text-lake-ink/50 font-bold">Oggetto</label>
                         <input 
@@ -54,7 +54,7 @@ function ReplyModal({ msg, onClose, onSent }) {
                         />
                     </div>
                 </div>
-                <div className="p-6 border-t border-lake-border bg-lake-sand/10 flex justify-end gap-3">
+                <div className="p-4 sm:p-6 border-t border-lake-border bg-lake-sand/10 flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2 border border-lake-border text-xs text-lake-ink rounded-sm hover:bg-lake-sand/20">Annulla</button>
                     <button onClick={send} disabled={sending} className="px-4 py-2 bg-lake-blue text-white text-xs rounded-sm hover:opacity-90 disabled:opacity-50">
                         {sending ? "Invio..." : "Invia Risposta"}
@@ -113,12 +113,16 @@ export default function Inbox() {
     }
 
     return (
-        <>
-            <div className="grid md:grid-cols-12 border border-lake-border bg-white rounded-sm h-[calc(100vh-140px)] shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-6 lg:p-10" data-testid="admin-inbox-page">
+            <div className="mb-4 sm:mb-6">
+                <p className="overline">Inbox</p>
+                <h1 className="font-display text-3xl sm:text-4xl text-lake-ink mt-2">Messaggi dal sito</h1>
+            </div>
+            <div className="grid md:grid-cols-12 border border-lake-border bg-white rounded-sm h-[calc(100dvh-170px)] md:h-[calc(100vh-200px)] min-h-[420px] shadow-sm overflow-hidden">
                 {/* LISTA MESSAGGI (COL 5) - Fixato lo scroll isolato qui */}
-                <div className="md:col-span-5 border-r border-lake-border flex flex-col h-full max-h-full overflow-hidden bg-lake-sand/5">
+                <div className={`md:col-span-5 md:border-r border-lake-border flex-col h-full max-h-full overflow-hidden bg-lake-sand/5 ${active ? "hidden md:flex" : "flex"}`}>
                     <div className="p-4 border-b border-lake-border bg-white shrink-0">
-                        <h2 className="font-display text-lg text-lake-ink">Richiesta Informazioni ({messages.length})</h2>
+                        <h2 className="font-display text-lg text-lake-ink">Richieste di informazioni ({messages.length})</h2>
                     </div>
                     <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-lake-border overscroll-contain">
                         {messages.length === 0 ? (
@@ -152,25 +156,26 @@ export default function Inbox() {
                 </div>
 
                 {/* VISUALIZZAZIONE CHAT / DETTAGLIO (COL 7) */}
-                <div className="md:col-span-7 flex flex-col h-full max-h-full overflow-hidden bg-white">
+                <div className={`md:col-span-7 flex-col h-full max-h-full overflow-hidden bg-white ${active ? "flex" : "hidden md:flex"}`}>
                     {active ? (
                         <div className="flex flex-col h-full max-h-full overflow-hidden">
                             {/* HEADER DETTAGLIO */}
-                            <div className="p-6 border-b border-lake-border flex justify-between items-start bg-lake-sand/5 shrink-0">
-                                <div className="space-y-1 text-left">
+                            <div className="p-4 sm:p-6 border-b border-lake-border flex flex-col sm:flex-row gap-3 justify-between sm:items-start bg-lake-sand/5 shrink-0">
+                                <button onClick={() => setActive(null)} className="md:hidden self-start text-sm text-lake-blue font-medium -mb-1" data-testid="inbox-back">← Tutti i messaggi</button>
+                                <div className="space-y-1 text-left min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-display text-xl text-lake-ink">{active.name}</h3>
+                                        <h3 className="font-display text-xl text-lake-ink truncate">{active.name}</h3>
                                         <Badge variant={active.status === "replied" ? "success" : "warning"} className="text-[9px] uppercase tracking-wider">
                                             {active.status === "replied" ? "Risposto" : "Da gestire"}
                                         </Badge>
                                     </div>
-                                    <p className="text-xs text-lake-ink/60">
+                                    <p className="text-xs text-lake-ink/60 break-all">
                                         Email: <span className="text-lake-ink/80 font-medium">{active.email}</span> 
                                         {active.phone && <> &middot; Tel: <span className="text-lake-ink/80 font-medium">{active.phone}</span></>}
                                     </p>
                                     <p className="text-sm font-medium text-lake-ink pt-1">Oggetto: {active.subject || "Richiesta info"}</p>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 shrink-0">
                                     <button 
                                         disabled={deleting}
                                         onClick={() => deleteMessage(active.id)}
@@ -181,7 +186,7 @@ export default function Inbox() {
                                     </button>
                                     <button 
                                         onClick={() => setShowReply(true)}
-                                        className="px-4 py-2 bg-lake-blue text-white text-xs rounded-sm hover:opacity-90"
+                                        className="flex-1 sm:flex-none px-4 py-2 bg-lake-blue text-white text-sm sm:text-xs rounded-sm hover:opacity-90"
                                     >
                                         Rispondi
                                     </button>
@@ -189,9 +194,9 @@ export default function Inbox() {
                             </div>
 
                             {/* CORPO CRONOLOGIA MESSAGGI (Fixato il ciclo map dell'anteprima email inviata) */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-lake-cream/10 flex flex-col min-h-0 overscroll-contain">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-lake-cream/10 flex flex-col min-h-0 overscroll-contain">
                                 {/* Messaggio Iniziale dell'Utente */}
-                                <div className="bg-lake-sand/20 border border-lake-border/60 rounded-sm p-4 max-w-[85%] text-left self-start shadow-sm">
+                                <div className="bg-lake-sand/20 border border-lake-border/60 rounded-sm p-4 max-w-[92%] sm:max-w-[85%] text-left self-start shadow-sm">
                                     <p className="text-[10px] uppercase tracking-widest text-lake-blue font-bold mb-1">Richiesta iniziale</p>
                                     <p className="text-sm text-lake-ink whitespace-pre-line leading-relaxed font-light">{active.message}</p>
                                     <p className="text-[9px] text-lake-ink/40 mt-2 text-right">{fmtItDateTime(active.created_at)}</p>
@@ -202,7 +207,7 @@ export default function Inbox() {
                                     <div className="space-y-4 pt-4 border-t border-dashed border-lake-border w-full flex flex-col">
                                         <p className="text-[10px] uppercase tracking-widest text-center text-lake-ink/40 font-bold">Cronologia risposte</p>
                                         {active.chat.map((reply) => (
-                                            <div key={reply.id} className="bg-lake-blue/5 border border-lake-blue/20 rounded-sm p-4 max-w-[85%] text-left self-end shadow-sm w-full">
+                                            <div key={reply.id} className="bg-lake-blue/5 border border-lake-blue/20 rounded-sm p-4 max-w-[92%] sm:max-w-[85%] text-left self-end shadow-sm w-full overflow-hidden">
                                                 <p className="text-[10px] uppercase tracking-widest text-lake-blue font-bold mb-1">Tua risposta ({reply.subject})</p>
                                                 <div 
                                                     className="text-sm text-lake-ink prose prose-sm max-w-none"
@@ -216,7 +221,7 @@ export default function Inbox() {
                             </div>
                         </div>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-10 border border-dashed border-lake-border rounded-sm">
+                        <div className="h-full flex flex-col items-center justify-center text-center p-10">
                             <p className="text-lake-ink/40 italic font-light">Seleziona una richiesta dalla lista per visualizzare la chat.</p>
                         </div>
                     )}
@@ -233,6 +238,6 @@ export default function Inbox() {
                     }}
                 />
             )}
-        </>
+        </div>
     );
 }

@@ -31,7 +31,7 @@ export default function AdminSettings() {
 
     useEffect(() => { api.get("/admin/settings").then((r) => setS(r.data)); }, []);
 
-    if (!s) return <div className="p-10">Caricamento...</div>;
+    if (!s) return <div className="p-4 sm:p-10 text-lake-ink/50 italic">Caricamento...</div>;
     const update = (patch) => setS({ ...s, ...patch });
 
     const save = async () => {
@@ -65,13 +65,13 @@ export default function AdminSettings() {
     const exportUrl = `${backendUrl}/api/ical/export.ics`;
 
     return (
-        <div className="p-10 space-y-10" data-testid="admin-settings-page">
+        <div className="p-4 sm:p-10 space-y-6 sm:space-y-10" data-testid="admin-settings-page">
             <div>
                 <p className="overline">Impostazioni</p>
-                <h1 className="font-display text-4xl text-lake-ink mt-2">Configurazione</h1>
+                <h1 className="font-display text-3xl sm:text-4xl text-lake-ink mt-2">Configurazione</h1>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-2 gap-5">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 grid md:grid-cols-2 gap-5">
                 <div className="md:col-span-2"><p className="font-display text-xl text-lake-ink">Dati villa</p></div>
                 <div><Label>Nome</Label><Input data-testid="s-villa-name" value={s.villa_name || ""} onChange={(e) => update({ villa_name: e.target.value })} /></div>
                 <div><Label>Email contatto</Label><Input data-testid="s-villa-email" value={s.villa_email || ""} onChange={(e) => update({ villa_email: e.target.value })} /></div>
@@ -82,7 +82,7 @@ export default function AdminSettings() {
                 <div className="md:col-span-2"><Label>Descrizione</Label><Textarea rows={4} data-testid="s-villa-desc" value={s.villa_description || ""} onChange={(e) => update({ villa_description: e.target.value })} /></div>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 space-y-5" data-testid="s-booking-mode">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-5" data-testid="s-booking-mode">
                 <div>
                     <p className="font-display text-xl text-lake-ink">Modalità di prenotazione</p>
                     <p className="text-sm text-lake-ink/60 mt-1">Scegli come gli ospiti prenotano dal sito.</p>
@@ -115,7 +115,7 @@ export default function AdminSettings() {
                 )}
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-2 gap-5" data-testid="s-legal">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 grid md:grid-cols-2 gap-5" data-testid="s-legal">
                 <div className="md:col-span-2">
                     <p className="font-display text-xl text-lake-ink">Dati legali (privacy e condizioni)</p>
                     <p className="text-sm text-lake-ink/60 mt-1">Compaiono nell'Informativa privacy, nelle Condizioni di prenotazione e nel footer. Il titolare è la persona o la società che gestisce l'affitto.</p>
@@ -126,7 +126,7 @@ export default function AdminSettings() {
                 <div className="md:col-span-2"><Label>Imposta di soggiorno (testo mostrato agli ospiti, vuoto se non prevista)</Label><Textarea rows={2} data-testid="s-legal-tourist-tax" placeholder="Es.: Imposta di soggiorno di € X a persona per notte, da pagare in loco. Esenti i minori di 10 anni." value={s.tourist_tax_note || ""} onChange={(e) => update({ tourist_tax_note: e.target.value })} /></div>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-3 gap-5">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 grid md:grid-cols-3 gap-5">
                 <div className="md:col-span-3"><p className="font-display text-xl text-lake-ink">Tariffe e politiche</p></div>
                 <div><Label>Prezzo notte base (€)</Label><Input data-testid="s-price" type="number" value={s.default_price_per_night} onChange={(e) => update({ default_price_per_night: parseFloat(e.target.value || 0) })} /></div>
                 <div><Label>% Acconto</Label><Input data-testid="s-deposit" type="number" value={s.deposit_percent} onChange={(e) => update({ deposit_percent: parseFloat(e.target.value || 0) })} /></div>
@@ -152,20 +152,20 @@ export default function AdminSettings() {
                 </div>
                 <div className="mt-6 space-y-3">
                     {(s.seasonal_rates || []).map((r, i) => (
-                        <div key={r.id || i} className="grid md:grid-cols-6 gap-3 items-end" data-testid={`rate-row-${i}`}>
-                            <div><Label>Nome</Label><Input value={r.name} onChange={(e) => updateRate(i, { name: e.target.value })} /></div>
+                        <div key={r.id || i} className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end p-3 md:p-0 border md:border-0 border-lake-border rounded-sm" data-testid={`rate-row-${i}`}>
+                            <div className="col-span-2 md:col-span-1"><Label>Nome</Label><Input value={r.name} onChange={(e) => updateRate(i, { name: e.target.value })} /></div>
                             <div><Label>Inizio</Label><Input placeholder="MM-DD" value={r.start_date} onChange={(e) => updateRate(i, { start_date: e.target.value })} /></div>
                             <div><Label>Fine</Label><Input placeholder="MM-DD" value={r.end_date} onChange={(e) => updateRate(i, { end_date: e.target.value })} /></div>
                             <div><Label>Prezzo/notte €</Label><Input type="number" value={r.price_per_night} onChange={(e) => updateRate(i, { price_per_night: parseFloat(e.target.value || 0) })} /></div>
                             <div><Label>Priorità</Label><Input type="number" value={r.priority} onChange={(e) => updateRate(i, { priority: parseInt(e.target.value || 1) })} /></div>
-                            <button onClick={() => removeRate(i)} data-testid={`delete-rate-${i}`} className="p-2 text-red-500 hover:bg-red-50 rounded-sm"><Trash2 size={16} /></button>
+                            <button onClick={() => removeRate(i)} data-testid={`delete-rate-${i}`} aria-label="Elimina periodo" className="h-10 flex items-center justify-center gap-2 text-sm text-red-500 border md:border-0 border-red-200 hover:bg-red-50 rounded-sm"><Trash2 size={16} /><span className="md:hidden">Elimina</span></button>
                         </div>
                     ))}
                     {(!s.seasonal_rates || s.seasonal_rates.length === 0) && <p className="text-sm text-lake-ink/60">Nessuna tariffa stagionale definita (verrà applicato il prezzo base).</p>}
                 </div>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 space-y-5">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-5">
                 <p className="font-display text-xl text-lake-ink">Channel Manager — iCal</p>
                 <div><Label>URL iCal Airbnb (PLACEHOLDER)</Label><Input data-testid="s-ical-airbnb" placeholder="https://www.airbnb.com/calendar/ical/..." value={s.ical_airbnb_url || ""} onChange={(e) => update({ ical_airbnb_url: e.target.value })} /></div>
                 <div><Label>URL iCal Booking.com (PLACEHOLDER)</Label><Input data-testid="s-ical-booking" placeholder="https://ical.booking.com/v1/export?t=..." value={s.ical_booking_url || ""} onChange={(e) => update({ ical_booking_url: e.target.value })} /></div>
@@ -187,7 +187,7 @@ export default function AdminSettings() {
                 <p className="text-xs text-lake-ink/60">Sincronizzazione automatica ogni 6 ore quando almeno un URL è configurato.</p>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 space-y-5" data-testid="settings-last-minute">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-5" data-testid="settings-last-minute">
                 <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-lake-blue" strokeWidth={1.5} />
                     <p className="font-display text-xl text-lake-ink">Banner Last Minute</p>
@@ -211,7 +211,7 @@ export default function AdminSettings() {
                 <div><Label>Sottotitolo</Label><Input data-testid="s-lm-subtitle" value={s.last_minute_subtitle || ""} onChange={(e) => update({ last_minute_subtitle: e.target.value })} /></div>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 space-y-3" data-testid="settings-stripe-webhook">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-3" data-testid="settings-stripe-webhook">
                 <div className="flex items-center gap-2">
                     <Webhook className="w-5 h-5 text-lake-blue" strokeWidth={1.5} />
                     <p className="font-display text-xl text-lake-ink">Stripe Webhook</p>
@@ -232,11 +232,13 @@ export default function AdminSettings() {
                 </p>
             </div>
 
-            <button onClick={save} disabled={saving} data-testid="save-settings-btn" className="px-8 py-3.5 rounded-sm bg-lake-blue text-white text-sm disabled:opacity-50">
-                {saving ? "Salvataggio..." : "Salva impostazioni"}
-            </button>
+            <div className="sticky bottom-0 z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 bg-lake-cream/95 backdrop-blur border-t sm:border-0 border-lake-border">
+                <button onClick={save} disabled={saving} data-testid="save-settings-btn" className="w-full sm:w-auto px-8 py-3.5 rounded-sm bg-lake-blue text-white text-sm shadow-sm disabled:opacity-50">
+                    {saving ? "Salvataggio..." : "Salva impostazioni"}
+                </button>
+            </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-8 grid md:grid-cols-3 gap-5" data-testid="settings-password">
+            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 grid md:grid-cols-3 gap-5" data-testid="settings-password">
                 <div className="md:col-span-3">
                     <p className="font-display text-xl text-lake-ink">Cambia password</p>
                     <p className="text-sm text-lake-ink/60 mt-1">Minimo 10 caratteri. Dopo il cambio, le sessioni aperte su altri dispositivi vengono chiuse.</p>

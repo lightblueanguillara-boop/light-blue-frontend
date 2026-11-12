@@ -64,7 +64,7 @@ export default function UploadModal({ isOpen, onClose, onRefresh }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-lake-ink/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-lake-ink/40 backdrop-blur-sm overflow-y-auto">
             <div className="bg-white w-full max-w-md rounded-sm shadow-xl overflow-hidden border border-lake-border">
                 {/* Header Modal */}
                 <div className="p-6 border-b border-lake-border flex justify-between items-center bg-lake-sand/10">

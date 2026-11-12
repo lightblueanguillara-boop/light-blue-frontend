@@ -117,22 +117,21 @@ export default function AdminMarketing() {
     };
 
     return (
-        <div className="p-10 grid lg:grid-cols-12 gap-8 relative">
+        <div className="p-4 sm:p-10 grid lg:grid-cols-12 gap-6 sm:gap-8 relative">
             
             {/* COLONNA SINISTRA: EDITOR E SELEZIONE */}
             <div className="lg:col-span-8 space-y-8">
                 <div>
                     <p className="overline text-lake-blue">Marketing</p>
-                    <h1 className="font-display text-4xl text-lake-ink mt-2">Comunicazione agli ospiti</h1>
+                    <h1 className="font-display text-3xl sm:text-4xl text-lake-ink mt-2">Comunicazione agli ospiti</h1>
                 </div>
 
                 {/* Box Selezione Destinatari */}
-                <div className="bg-white border border-lake-border rounded-sm p-6 shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-lake-ink">
-                            1. Seleziona Destinatari
-                            {/* FIX: mostra contatore in tempo reale chiaramente */}
-                            <span className={`ml-2 text-sm font-normal px-2 py-0.5 rounded-full ${selectedEmails.length > 0 ? 'bg-lake-blue text-white' : 'bg-gray-100 text-gray-500'}`}>
+                <div className="bg-white border border-lake-border rounded-sm p-4 sm:p-6 shadow-sm">
+                    <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
+                        <h3 className="font-bold text-lake-ink flex flex-wrap items-center gap-2">
+                            1. Seleziona destinatari
+                            <span className={`text-xs font-normal px-2 py-0.5 rounded-full whitespace-nowrap ${selectedEmails.length > 0 ? 'bg-lake-blue text-white' : 'bg-gray-100 text-gray-500'}`}>
                                 {selectedEmails.length} / {subscribers.length} selezionati
                             </span>
                         </h3>
@@ -173,8 +172,8 @@ export default function AdminMarketing() {
                 </div>
 
                 {/* Box Editor */}
-                <div className="bg-white border border-lake-border rounded-sm p-8 space-y-4 shadow-sm">
-                    <h3 className="font-bold text-lake-ink">2. Componi Email (HTML Supportato)</h3>
+                <div className="bg-white border border-lake-border rounded-sm p-4 sm:p-8 space-y-4 shadow-sm">
+                    <h3 className="font-bold text-lake-ink">2. Scrivi l'email <span className="font-normal text-xs text-lake-ink/50">(HTML supportato)</span></h3>
                     <Input 
                         placeholder="Oggetto della campagna" 
                         value={subject} 
@@ -188,11 +187,11 @@ export default function AdminMarketing() {
                         onChange={(e) => setHtml(e.target.value)} 
                         className="font-mono text-sm border-lake-border"
                     />
-                    <div className="flex justify-end">
+                    <div className="flex sm:justify-end">
                         <button 
                             onClick={sendCampaign} 
                             disabled={sending || selectedEmails.length === 0} 
-                            className={`px-8 py-3 rounded-sm font-bold uppercase tracking-widest text-xs transition-all ${
+                            className={`w-full sm:w-auto px-8 py-3 rounded-sm font-bold uppercase tracking-widest text-xs transition-all ${
                                 sending || selectedEmails.length === 0 
                                 ? "bg-gray-300 cursor-not-allowed" 
                                 : "bg-lake-blue text-white hover:bg-lake-ink"
