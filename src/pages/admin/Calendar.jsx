@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Lock, Plus, Euro, X, MessageCircle, ExternalLink, Check, XCircle, Unlock, RotateCcw } from "lucide-react";
 import { api } from "../../lib/api";
@@ -86,6 +86,24 @@ export default function AdminCalendar() {
     useEffect(() => { loadPrices(); }, [loadPrices]);
 
     const requestActions = useRequestActions(() => { setSelected(null); reload(); });
+
+    // apertura diretta (es. dalla notifica): /admin/calendar?date=AAAA-MM-GG&open=<id>
+    const [params, setParams] = useSearchParams();
+    const [pendingOpen, setPendingOpen] = useState(null);
+    useEffect(() => {
+        const dt = params.get("date");
+        const id = params.get("open");
+        if (!dt && !id) return;
+        if (dt && /^\d{4}-\d{2}-\d{2}$/.test(dt)) setMonth({ y: Number(dt.slice(0, 4)), m: Number(dt.slice(5, 7)) - 1 });
+        if (id) setPendingOpen(id);
+        setParams({}, { replace: true });
+    }, [params, setParams]);
+    useEffect(() => {
+        if (!pendingOpen || !items.length) return;
+        const b = items.find((x) => x.id === pendingOpen);
+        if (b) setSelected(b);
+        setPendingOpen(null);
+    }, [pendingOpen, items]);
 
     // notte occupata -> prenotazione
     const nightOwner = useMemo(() => {

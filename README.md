@@ -37,3 +37,9 @@ Prima di aggiungere script o servizi di terze parti, aggiornare Informativa priv
   `scripts/gen-manifest.js` prima di `npm start` / `npm run build`, usando `REACT_APP_BACKEND_URL`.
 - I tag Open Graph in `public/index.html` danno titolo, descrizione e immagine alle anteprime di WhatsApp,
   Facebook e Telegram.
+
+## Notifiche sul telefono
+
+- `public/sw.js` (service worker, ambito `/admin`): riceve le notifiche push, aggiorna il numero sull'icona e,
+  al tocco, apre la pagina indicata dalla notifica (o naviga l'app se è già aperta). Non salva dati in cache.
+- L'attivazione avviene da **Impostazioni → Notifiche sul telefono** (su iPhone solo dall'app installata).

@@ -104,6 +104,8 @@ export default function AdminBookings() {
         const b = items.find((x) => x.id === id);
         if (b) {
             if (REQUEST_STATES.includes(b.status)) setTab("requests");
+            else if (ARCHIVE_STATES.includes(b.status)) setTab("archive");
+            else setTab("list");
             setSelectedBooking(b);
             setDetailOpen(true);
         }
@@ -168,8 +170,9 @@ export default function AdminBookings() {
 
     // Apre la scheda "Richieste" se ce ne sono da valutare
     useEffect(() => {
-        if (tab === null && items.length) setTab(openRequests > 0 ? "requests" : "list");
-    }, [items, openRequests, tab]);
+        // se si arriva con ?open=<id> la scheda giusta la sceglie l'apertura diretta
+        if (tab === null && items.length && !params.get("open")) setTab(openRequests > 0 ? "requests" : "list");
+    }, [items, openRequests, tab, params]);
 
     const update = async (id, patch) => {
         try {

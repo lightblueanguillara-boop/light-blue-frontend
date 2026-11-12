@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
@@ -8,6 +9,136 @@ import { Switch } from "../../components/ui/switch";
 import { fmtItDateTime } from "../../lib/date";
 import { api } from "../../lib/api";
 import { logoUrl, shareImageUrl } from "../../lib/brand";
+import { currentSubscription, disablePush, enablePush, isIOS, isStandalone, pushSupported } from "../../lib/push";
+import { Button } from "../../components/ui/button";
+
+const GROUPS = [
+    { k: "A", t: "Prenotazioni", d: "Nuove richieste, richieste in scadenza o scadute, pagamenti ricevuti o non completati." },
+    { k: "B", t: "Airbnb e Booking.com", d: "Prenotazioni nuove o rimosse, calendario non aggiornato." },
+    { k: "C", t: "Messaggi", d: "Nuovi messaggi dal modulo contatti del sito." },
+    { k: "D", t: "Promemoria", d: "Arrivo il giorno prima alle 18:00, partenza il giorno stesso alle 8:00." },
+];
+
+/** Notifiche sul telefono: attivazione per dispositivo e preferenze (salvate con "Salva impostazioni"). */
+function NotificationSettings({ s, update }) {
+    const [cfg, setCfg] = useState(null);
+    const [devices, setDevices] = useState([]);
+    const [thisEndpoint, setThisEndpoint] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const supported = pushSupported();
+    const iosNotInstalled = isIOS() && !isStandalone();
+    const permission = supported ? Notification.permission : "unsupported";
+
+    const load = async () => {
+        try {
+            const [c, d] = await Promise.all([api.get("/admin/push/config"), api.get("/admin/push/subscriptions")]);
+            setCfg(c.data); setDevices(d.data);
+            if (supported) { const sub = await currentSubscription(); setThisEndpoint(sub?.endpoint || null); }
+        } catch { /* gestito dagli stati sotto */ }
+    };
+    useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const thisDevice = devices.find((d) => d.endpoint === thisEndpoint);
+    const run = async (fn, ok) => {
+        setBusy(true);
+        try { await fn(); if (ok) toast.success(ok); await load(); }
+        catch (e) { const d = e?.response?.data?.detail; toast.error(typeof d === "string" ? d : e.message || "Operazione non riuscita"); }
+        finally { setBusy(false); }
+    };
+    const groups = { A: true, B: true, C: true, D: true, ...(s.notify_groups || {}) };
+
+    return (
+        <div id="notifiche" className="scroll-mt-20 bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-6" data-testid="s-notifications">
+            <div>
+                <p className="font-display text-xl text-lake-ink">Notifiche sul telefono</p>
+                <p className="text-sm text-lake-ink/60 mt-1">Avvisi in tempo reale su richieste, pagamenti, messaggi e promemoria. Le email restano attive come riserva.</p>
+            </div>
+
+            {/* ---- questo dispositivo */}
+            <div className="rounded-sm border border-lake-border p-4 space-y-3 bg-slate-50/60" data-testid="push-this-device">
+                <p className="text-xs uppercase font-bold tracking-wider text-lake-ink/60">Questo dispositivo</p>
+                {cfg && !cfg.enabled ? (
+                    <p className="text-sm text-amber-800">Le notifiche non sono ancora configurate sul server.</p>
+                ) : iosNotInstalled ? (
+                    <p className="text-sm text-lake-ink/80">Su iPhone le notifiche funzionano solo dall'app: in Safari tocca <strong>Condividi</strong>, poi <strong>Aggiungi alla schermata Home</strong>. Apri Light Blue dall'icona e torna in questa pagina per attivarle.</p>
+                ) : !supported ? (
+                    <p className="text-sm text-lake-ink/80">Questo browser non supporta le notifiche.</p>
+                ) : permission === "denied" ? (
+                    <p className="text-sm text-lake-ink/80">Le notifiche sono bloccate per Light Blue. Riattivale dalle impostazioni del telefono o del browser, poi ricarica la pagina.</p>
+                ) : thisDevice ? (
+                    <>
+                        <p className="text-sm text-emerald-700 font-semibold">Notifiche attive su questo dispositivo ({thisDevice.label}).</p>
+                        <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => run(() => api.post("/admin/push/test", { id: thisDevice.id }), "Notifica di prova inviata")} disabled={busy} className="bg-lake-blue hover:bg-lake-blue/90" data-testid="push-test-btn">Invia notifica di prova</Button>
+                            <Button variant="outline" onClick={() => run(() => disablePush(thisDevice.id), "Notifiche disattivate su questo dispositivo")} disabled={busy}>Disattiva qui</Button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <p className="text-sm text-lake-ink/80">Le notifiche non sono attive su questo dispositivo.</p>
+                        <Button onClick={() => run(() => enablePush(), "Notifiche attivate")} disabled={busy || !cfg} className="bg-lake-blue hover:bg-lake-blue/90" data-testid="push-enable-btn">Attiva notifiche su questo dispositivo</Button>
+                    </>
+                )}
+            </div>
+
+            {/* ---- dispositivi attivi */}
+            {devices.length > 0 && (
+                <div className="space-y-2">
+                    <p className="text-xs uppercase font-bold tracking-wider text-lake-ink/60">Dispositivi che ricevono le notifiche</p>
+                    <ul className="divide-y divide-lake-border border border-lake-border rounded-sm">
+                        {devices.map((d) => (
+                            <li key={d.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                                <span className="min-w-0">
+                                    <span className="block font-semibold text-lake-ink truncate">{d.label}{d.endpoint === thisEndpoint ? " (questo)" : ""}</span>
+                                    <span className="block text-xs text-lake-ink/50">Attivato il {fmtItDateTime(d.created_at)}</span>
+                                </span>
+                                <button onClick={() => run(() => api.delete(`/admin/push/subscriptions/${d.id}`), "Dispositivo rimosso")} className="text-xs font-semibold text-red-600 shrink-0">Rimuovi</button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {/* ---- cosa ricevere */}
+            <div className="space-y-3">
+                <p className="text-xs uppercase font-bold tracking-wider text-lake-ink/60">Cosa ricevere</p>
+                {GROUPS.map((g) => (
+                    <label key={g.k} className="flex items-start justify-between gap-4 cursor-pointer">
+                        <span><span className="block text-sm font-semibold text-lake-ink">{g.t}</span><span className="block text-xs text-lake-ink/60">{g.d}</span></span>
+                        <Switch checked={groups[g.k] !== false} onCheckedChange={(v) => update({ notify_groups: { ...groups, [g.k]: v } })} data-testid={`notify-group-${g.k}`} />
+                    </label>
+                ))}
+                <p className="text-xs text-lake-ink/60">Sicurezza e problemi (pagamento da verificare, email non consegnata, nuovo accesso al pannello) sono sempre attive.</p>
+            </div>
+
+            {/* ---- dettaglio e silenzio */}
+            <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <p className="text-xs uppercase font-bold tracking-wider text-lake-ink/60">Testo sulla schermata di blocco</p>
+                    {[["detailed", "Dettagliato", "Nome, date e importo (es. Sara Conti, dal 24 al 27 novembre)."], ["discreet", "Discreto", "Solo un avviso generico, i dettagli dopo aver aperto l'app."]].map(([v, t, d]) => (
+                        <label key={v} className="flex items-start gap-3 cursor-pointer">
+                            <input type="radio" name="notify_detail" className="mt-1 accent-lake-blue" checked={(s.notify_detail || "detailed") === v} onChange={() => update({ notify_detail: v })} />
+                            <span><span className="block text-sm font-semibold text-lake-ink">{t}</span><span className="block text-xs text-lake-ink/60">{d}</span></span>
+                        </label>
+                    ))}
+                </div>
+                <div className="space-y-2">
+                    <label className="flex items-center justify-between gap-4 cursor-pointer">
+                        <span className="text-xs uppercase font-bold tracking-wider text-lake-ink/60">Silenzio notturno</span>
+                        <Switch checked={s.notify_quiet_enabled !== false} onCheckedChange={(v) => update({ notify_quiet_enabled: v })} />
+                    </label>
+                    {s.notify_quiet_enabled !== false && (
+                        <div className="flex items-center gap-2 text-sm">
+                            dalle <Input type="time" className="w-28" value={s.notify_quiet_start || "23:00"} onChange={(e) => update({ notify_quiet_start: e.target.value })} />
+                            alle <Input type="time" className="w-28" value={s.notify_quiet_end || "08:00"} onChange={(e) => update({ notify_quiet_end: e.target.value })} />
+                        </div>
+                    )}
+                    <p className="text-xs text-lake-ink/60">In queste ore gli avvisi vengono trattenuti e arrivano alla fine del silenzio. Pagamento da verificare e nuovo accesso arrivano sempre.</p>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 /** Caricamento di logo o immagine di anteprima: effetto immediato, senza "Salva impostazioni". */
 function BrandUploader({ kind, version, onChanged }) {
@@ -85,6 +216,12 @@ export default function AdminSettings() {
     };
 
     useEffect(() => { api.get("/admin/settings").then((r) => setS(r.data)); }, []);
+    const location = useLocation();
+    useEffect(() => {
+        if (!s || !location.hash) return;
+        const el = document.getElementById(location.hash.slice(1));
+        if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    }, [s, location.hash]);
 
     if (!s) return <div className="p-4 sm:p-10 text-lake-ink/50 italic">Caricamento...</div>;
     const update = (patch) => setS({ ...s, ...patch });
@@ -136,6 +273,8 @@ export default function AdminSettings() {
                 <div><Label>Codice CIN (Codice Identificativo Nazionale)</Label><Input data-testid="s-villa-cir" value={s.villa_cir || ""} onChange={(e) => update({ villa_cir: e.target.value })} /></div>
                 <div className="md:col-span-2"><Label>Descrizione</Label><Textarea rows={4} data-testid="s-villa-desc" value={s.villa_description || ""} onChange={(e) => update({ villa_description: e.target.value })} /></div>
             </div>
+
+            <NotificationSettings s={s} update={update} />
 
             <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-6" data-testid="s-brand">
                 <div>
@@ -231,10 +370,15 @@ export default function AdminSettings() {
                 </div>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-5">
-                <p className="font-display text-xl text-lake-ink">Channel Manager — iCal</p>
-                <div><Label>URL iCal Airbnb (PLACEHOLDER)</Label><Input data-testid="s-ical-airbnb" placeholder="https://www.airbnb.com/calendar/ical/..." value={s.ical_airbnb_url || ""} onChange={(e) => update({ ical_airbnb_url: e.target.value })} /></div>
-                <div><Label>URL iCal Booking.com (PLACEHOLDER)</Label><Input data-testid="s-ical-booking" placeholder="https://ical.booking.com/v1/export?t=..." value={s.ical_booking_url || ""} onChange={(e) => update({ ical_booking_url: e.target.value })} /></div>
+            <div id="ical" className="scroll-mt-20 bg-white border border-lake-border rounded-sm p-5 sm:p-8 space-y-5">
+                <p className="font-display text-xl text-lake-ink">Calendari Airbnb e Booking.com (iCal)</p>
+                {(s.last_ical_sync_errors || []).length > 0 && (
+                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-sm p-3" data-testid="ical-errors">
+                        Ultima sincronizzazione con problemi: {s.last_ical_sync_errors.join(", ")}. Controlla che i link siano corretti.
+                    </p>
+                )}
+                <div><Label>Link iCal di Airbnb</Label><Input data-testid="s-ical-airbnb" placeholder="https://www.airbnb.com/calendar/ical/..." value={s.ical_airbnb_url || ""} onChange={(e) => update({ ical_airbnb_url: e.target.value })} /></div>
+                <div><Label>Link iCal di Booking.com</Label><Input data-testid="s-ical-booking" placeholder="https://ical.booking.com/v1/export?t=..." value={s.ical_booking_url || ""} onChange={(e) => update({ ical_booking_url: e.target.value })} /></div>
                 <div>
                     <Label>URL iCal del sito (da condividere con Airbnb/Booking)</Label>
                     <div className="flex gap-2 mt-1">
@@ -304,7 +448,7 @@ export default function AdminSettings() {
                 </button>
             </div>
 
-            <div className="bg-white border border-lake-border rounded-sm p-5 sm:p-8 grid md:grid-cols-3 gap-5" data-testid="settings-password">
+            <div className="scroll-mt-20 bg-white border border-lake-border rounded-sm p-5 sm:p-8 grid md:grid-cols-3 gap-5" id="password" data-testid="settings-password">
                 <div className="md:col-span-3">
                     <p className="font-display text-xl text-lake-ink">Cambia password</p>
                     <p className="text-sm text-lake-ink/60 mt-1">Minimo 10 caratteri. Dopo il cambio, le sessioni aperte su altri dispositivi vengono chiuse.</p>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/ui/badge";
@@ -88,6 +89,16 @@ export default function Inbox() {
     useEffect(() => {
         loadMessages();
     }, [loadMessages]);
+
+    // apertura diretta di un messaggio (es. dalla notifica): /admin/inbox?open=<id>
+    const [params, setParams] = useSearchParams();
+    useEffect(() => {
+        const id = params.get("open");
+        if (!id || loading) return;
+        const m = messages.find((x) => x.id === id);
+        if (m) setActive(m);
+        setParams({}, { replace: true });
+    }, [params, messages, loading, setParams]);
 
     const deleteMessage = async (id) => {
         if (!window.confirm("Sei sicuro di voler eliminare definitivamente questa chat? Questa azione non è reversibile.")) return;

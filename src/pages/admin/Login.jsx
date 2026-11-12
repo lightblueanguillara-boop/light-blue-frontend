@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Input } from "../../components/ui/input";
 import { api } from "../../lib/api";
 import { logoUrl } from "../../lib/brand";
+import { deviceId } from "../../lib/push";
 
 export default function AdminLogin() {
     // nessuna email precompilata: non va mostrata a chi apre la pagina (la ricorda il browser)
@@ -18,7 +19,7 @@ export default function AdminLogin() {
         e.preventDefault();
         setLoading(true);
         try {
-            const r = await api.post("/admin/login", { email, password });
+            const r = await api.post("/admin/login", { email, password, device_id: deviceId() });
             localStorage.setItem("lv_admin_token", r.data.token);
             localStorage.setItem("lv_admin_email", r.data.email);
             toast.success("Accesso effettuato");

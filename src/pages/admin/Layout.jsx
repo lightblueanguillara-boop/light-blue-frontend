@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { logoUrl } from "../../lib/brand";
+import { refreshAppBadge, registerServiceWorker } from "../../lib/push";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
     LayoutDashboard,
@@ -34,6 +35,18 @@ export default function AdminLayout() {
     const [logoVersion, setLogoVersion] = useState(null);
     useEffect(() => { api.get("/villa/info").then((r) => setLogoVersion(r.data.logo_version || "default")).catch(() => setLogoVersion("default")); }, []);
     const Logo = ({ size }) => (logoVersion ? <img src={logoUrl(logoVersion, 192)} alt="" width={size} height={size} className="rounded-full shrink-0" style={{ width: size, height: size }} /> : <span style={{ width: size, height: size }} className="shrink-0" />);
+
+    // notifiche: service worker, numero sull'icona, navigazione quando si tocca una notifica ad app aperta
+    useEffect(() => {
+        registerServiceWorker();
+        refreshAppBadge();
+        const onVisible = () => { if (document.visibilityState === "visible") refreshAppBadge(); };
+        const onMessage = (e) => { if (e.data?.type === "navigate" && typeof e.data.url === "string" && e.data.url.startsWith("/admin")) nav(e.data.url); };
+        document.addEventListener("visibilitychange", onVisible);
+        navigator.serviceWorker?.addEventListener("message", onMessage);
+        navigator.serviceWorker?.startMessages?.();   // senza questo i messaggi del service worker restano in coda
+        return () => { document.removeEventListener("visibilitychange", onVisible); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    }, [nav]);
 
     // su telefono il menu si chiude quando si cambia pagina
     useEffect(() => { setMenuOpen(false); }, [location.pathname]);
