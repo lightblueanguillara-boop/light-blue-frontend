@@ -15,6 +15,7 @@ import AdminLogin from "./pages/admin/Login";
 import AdminLayout from "./pages/admin/Layout";
 import AdminOverview from "./pages/admin/Overview";
 import AdminBookings from "./pages/admin/Bookings";
+import AdminCalendar from "./pages/admin/Calendar";
 import AdminInbox from "./pages/admin/Inbox";
 import AdminCRM from "./pages/admin/CRM";
 import AdminMarketing from "./pages/admin/Marketing";
@@ -52,6 +53,7 @@ function App() {
                         }
                     >
                         <Route index element={<AdminOverview />} />
+                        <Route path="calendar" element={<AdminCalendar />} />
                         <Route path="bookings" element={<AdminBookings />} />
                         <Route path="inbox" element={<AdminInbox />} />
                         <Route path="crm" element={<AdminCRM />} />

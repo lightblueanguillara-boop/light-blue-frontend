@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { DayPicker } from "react-day-picker";
-import { it } from "date-fns/locale";
-import "react-day-picker/dist/style.css";
-import { Calendar as CalendarIcon, List, Plus, Pencil, Search, Info, CreditCard, Hash, Users, Phone, Mail, FileText, Archive, Trash2, AlertCircle, Inbox, Check, XCircle, MessageCircle, Clock, Copy } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Calendar as CalendarIcon, List, Plus, Pencil, Search, Info, CreditCard, Hash, Users, Phone, Mail, FileText, Archive, Trash2, AlertCircle, Inbox, Check, XCircle, MessageCircle, Clock } from "lucide-react";
 import { api } from "../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
@@ -13,9 +11,8 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { Textarea } from "../../components/ui/textarea";
 import { fmtItDate, fmtItDateTime } from "../../lib/date";
-import { whatsappUrl } from "../../lib/whatsapp";
+import { useRequestActions } from "../../components/admin/RequestActions";
 
 const statusColors = {
     pending: "bg-amber-100 text-amber-700",
@@ -43,6 +40,8 @@ const statusLabels = {
 const BLOCKING = ["pending", "confirmed", "external", "request", "awaiting_payment"];
 const REQUEST_STATES = ["request", "awaiting_payment"];
 const ARCHIVE_STATES = ["cancelled", "rejected", "expired"];
+// I blocchi date si gestiscono dal Calendario, non compaiono negli elenchi prenotazioni
+const HIDDEN_STATES = ["blocked"];
 
 /** Tempo rimanente leggibile fino a una scadenza ISO. */
 function timeLeft(iso) {
@@ -73,20 +72,39 @@ export default function AdminBookings() {
 
     // Richieste di prenotazione
     const [tab, setTab] = useState(null);
-    const [decision, setDecision] = useState(null); // { type: "approve" | "reject", booking }
-    const [rejectReason, setRejectReason] = useState("");
-    const [deciding, setDeciding] = useState(false);
-    const [waResult, setWaResult] = useState(null); // { booking, text, title }
 
     const [manualForm, setManualForm] = useState({
         guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale", is_refundable: "true"
     });
 
     const load = () => api.get("/admin/bookings").then((r) => setItems(r.data)).catch(() => toast.error("Errore caricamento dati"));
+    const requestActions = useRequestActions(load);
+    const [params, setParams] = useSearchParams();
+
+    // Arrivo dal Calendario: ?new=1&ci=...&co=...  (nuova prenotazione)  oppure  ?open=<id>  (scheda)
+    useEffect(() => {
+        if (params.get("new")) {
+            setErrorMessage("");
+            setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: params.get("ci") || "", check_out: params.get("co") || "", total_price: params.get("price") || "", adults: 2, children: 0, notes: "Prenotazione manuale", is_refundable: "true" });
+            setManualOpen(true);
+            setParams({}, { replace: true });
+        }
+    }, [params, setParams]);
+    useEffect(() => {
+        const id = params.get("open");
+        if (!id || !items.length) return;
+        const b = items.find((x) => x.id === id);
+        if (b) {
+            if (REQUEST_STATES.includes(b.status)) setTab("requests");
+            setSelectedBooking(b);
+            setDetailOpen(true);
+        }
+        setParams({}, { replace: true });
+    }, [params, items, setParams]);
     useEffect(() => { load(); }, []);
 
     const activeItems = useMemo(() => {
-        return items.filter((b) => !ARCHIVE_STATES.includes(b.status) && !REQUEST_STATES.includes(b.status)).filter((b) => {
+        return items.filter((b) => !ARCHIVE_STATES.includes(b.status) && !REQUEST_STATES.includes(b.status) && !HIDDEN_STATES.includes(b.status)).filter((b) => {
             const searchTerm = search.toLowerCase();
             
             const guestName = b.guest_name ? b.guest_name.toLowerCase() : "";
@@ -134,19 +152,6 @@ export default function AdminBookings() {
         });
     }, [items, search]);
 
-    const bookedDates = useMemo(() => {
-        const dates = [];
-        items.filter(b => BLOCKING.includes(b.status)).forEach(b => {
-            let current = new Date(b.check_in);
-            const end = new Date(b.check_out);
-            while (current < end) {
-                dates.push(new Date(current));
-                current.setDate(current.getDate() + 1);
-            }
-        });
-        return dates;
-    }, [items]);
-
     const requestItems = useMemo(() => items
         .filter((b) => REQUEST_STATES.includes(b.status))
         .sort((a, b) => (a.status === "request" ? 0 : 1) - (b.status === "request" ? 0 : 1) || (a.created_at < b.created_at ? -1 : 1)),
@@ -157,42 +162,6 @@ export default function AdminBookings() {
     useEffect(() => {
         if (tab === null && items.length) setTab(openRequests > 0 ? "requests" : "list");
     }, [items, openRequests, tab]);
-
-    const decide = async () => {
-        if (!decision) return;
-        setDeciding(true);
-        try {
-            const { type, booking } = decision;
-            const r = type === "approve"
-                ? await api.post(`/admin/bookings/${booking.id}/approve`)
-                : await api.post(`/admin/bookings/${booking.id}/reject`, { reason: rejectReason });
-            toast.success(type === "approve"
-                ? "Richiesta accettata: link di pagamento inviato via email all'ospite"
-                : "Richiesta rifiutata: l'ospite è stato avvisato via email");
-            setDecision(null);
-            setRejectReason("");
-            setWaResult({
-                booking: r.data.booking,
-                text: r.data.whatsapp_text,
-                title: type === "approve" ? "Richiesta accettata" : "Richiesta rifiutata",
-            });
-            load();
-        } catch (err) {
-            const d = err?.response?.data?.detail;
-            toast.error(typeof d === "string" ? d : "Operazione non riuscita");
-        } finally {
-            setDeciding(false);
-        }
-    };
-
-    const openWhatsapp = async (b) => {
-        try {
-            const r = await api.get(`/admin/bookings/${b.id}/whatsapp`);
-            setWaResult({ booking: b, text: r.data.text, title: "Messaggio WhatsApp" });
-        } catch {
-            toast.error("Impossibile preparare il messaggio");
-        }
-    };
 
     const update = async (id, patch) => {
         try {
@@ -432,15 +401,15 @@ export default function AdminBookings() {
                                 <TableCell className="text-right">
                                     <div className="flex flex-col items-end gap-1.5 text-[11px] font-bold">
                                         {b.status === "request" && (
-                                            <button onClick={() => setDecision({ type: "approve", booking: b })} data-testid={`approve-${b.id}`} className="flex items-center gap-1 text-emerald-700 hover:underline">
+                                            <button onClick={() => requestActions.askApprove(b)} data-testid={`approve-${b.id}`} className="flex items-center gap-1 text-emerald-700 hover:underline">
                                                 <Check className="w-3.5 h-3.5" /> ACCETTA
                                             </button>
                                         )}
-                                        <button onClick={() => { setRejectReason(""); setDecision({ type: "reject", booking: b }); }} data-testid={`reject-${b.id}`} className="flex items-center gap-1 text-rose-600 hover:underline">
+                                        <button onClick={() => requestActions.askReject(b)} data-testid={`reject-${b.id}`} className="flex items-center gap-1 text-rose-600 hover:underline">
                                             <XCircle className="w-3.5 h-3.5" /> RIFIUTA
                                         </button>
                                         {b.guest_phone && (
-                                            <button onClick={() => openWhatsapp(b)} className="flex items-center gap-1 text-green-700 hover:underline">
+                                            <button onClick={() => requestActions.openWhatsapp(b)} className="flex items-center gap-1 text-green-700 hover:underline">
                                                 <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP
                                             </button>
                                         )}
@@ -461,9 +430,14 @@ export default function AdminBookings() {
                     <p className="overline text-lake-ink/60 font-bold tracking-widest leading-none">Gestione Proprietà</p>
                     <h1 className="font-display text-4xl text-lake-ink mt-2">Prenotazioni</h1>
                 </div>
+                <div className="flex gap-2">
+                <Link to="/admin/calendar" className="inline-flex items-center px-4 h-10 rounded-sm border border-lake-border text-sm text-lake-ink hover:bg-white">
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Calendario
+                </Link>
                 <Button onClick={() => { setErrorMessage(""); setManualForm({ guest_name: "", guest_email: "", guest_phone: "", check_in: "", check_out: "", total_price: "", adults: 2, children: 0, notes: "Prenotazione manuale", is_refundable: "true" }); setManualOpen(true); }} className="bg-lake-blue hover:bg-lake-blue/90">
                     <Plus className="mr-2 h-4 w-4" /> Nuova Prenotazione
                 </Button>
+                </div>
             </div>
 
             <div className="bg-white border border-lake-border p-4 mb-6 rounded-sm flex flex-wrap gap-4 items-center">
@@ -511,7 +485,6 @@ export default function AdminBookings() {
                         )}
                     </TabsTrigger>
                     <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> Lista</TabsTrigger>
-                    <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4" /> Calendario</TabsTrigger>
                     <TabsTrigger value="archive">
                         <Archive className="mr-2 h-4 w-4" /> Archivio
                         {archivedItems.length > 0 && (
@@ -534,10 +507,6 @@ export default function AdminBookings() {
                     <BookingsTable rows={activeItems} showActions={true} />
                 </TabsContent>
 
-                <TabsContent value="calendar" className="bg-white border border-lake-border rounded-sm p-10 flex justify-center">
-                    <DayPicker mode="multiple" locale={it} modifiers={{ booked: bookedDates }} modifiersStyles={{ booked: { backgroundColor: "#ef4444", color: "white", borderRadius: 0 } }} numberOfMonths={3} className="admin-calendar" />
-                </TabsContent>
-
                 <TabsContent value="archive">
                     <div className="mb-4 flex items-center gap-2 text-sm text-lake-ink/60">
                         <Archive className="w-4 h-4" />
@@ -547,70 +516,7 @@ export default function AdminBookings() {
                 </TabsContent>
             </Tabs>
 
-            <Dialog open={!!decision} onOpenChange={(o) => !o && setDecision(null)}>
-                <DialogContent className={`sm:max-w-[460px] border-t-4 ${decision?.type === "approve" ? "border-t-emerald-500" : "border-t-rose-400"}`}>
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-display text-lake-ink">
-                            {decision?.type === "approve" ? "Accetta richiesta" : "Rifiuta richiesta"}
-                        </DialogTitle>
-                        {decision && (
-                            <DialogDescription className="pt-2">
-                                <span className="block font-semibold text-lake-ink">{decision.booking.guest_name}</span>
-                                <span className="block text-sm">{fmtItDate(decision.booking.check_in)} → {fmtItDate(decision.booking.check_out)} · €{decision.booking.total_price}</span>
-                            </DialogDescription>
-                        )}
-                    </DialogHeader>
-                    {decision?.type === "approve" ? (
-                        <p className="text-sm text-lake-ink/80">All'ospite verrà inviata un'email con il <strong>link di pagamento</strong>. La prenotazione sarà confermata automaticamente quando avrà pagato; se non paga entro la scadenza, le date si liberano.</p>
-                    ) : (
-                        <div className="space-y-2">
-                            <p className="text-sm text-lake-ink/80">All'ospite verrà inviata un'email di cortesia e le date torneranno libere.</p>
-                            <Label className="text-xs">Motivo (facoltativo, verrà mostrato all'ospite)</Label>
-                            <Textarea rows={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Es.: la casa non è disponibile in quelle date." />
-                        </div>
-                    )}
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setDecision(null)} disabled={deciding}>Annulla</Button>
-                        <Button onClick={decide} disabled={deciding} data-testid="confirm-decision" className={decision?.type === "approve" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-rose-500 hover:bg-rose-600 text-white"}>
-                            {deciding ? "Attendere..." : decision?.type === "approve" ? "Accetta e invia link" : "Rifiuta e avvisa"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={!!waResult} onOpenChange={(o) => !o && setWaResult(null)}>
-                <DialogContent className="sm:max-w-[480px] border-t-4 border-t-green-600" data-testid="whatsapp-dialog">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-display text-lake-ink">{waResult?.title}</DialogTitle>
-                        <DialogDescription>Messaggio WhatsApp pronto per {waResult?.booking?.guest_name}. Puoi modificarlo prima di aprire WhatsApp.</DialogDescription>
-                    </DialogHeader>
-                    {waResult && (() => {
-                        const url = whatsappUrl(waResult.booking.guest_phone, waResult.text);
-                        return (
-                            <div className="space-y-3">
-                                <Textarea rows={6} value={waResult.text} onChange={(e) => setWaResult({ ...waResult, text: e.target.value })} />
-                                {!waResult.booking.contact_whatsapp && (
-                                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 p-2 rounded-sm">L'ospite non ha dato il consenso a essere contattato su WhatsApp: l'email è già stata inviata, usa WhatsApp solo se necessario.</p>
-                                )}
-                                {!url && <p className="text-xs text-rose-600">Numero di telefono non valido o mancante.</p>}
-                                <div className="flex flex-wrap gap-2">
-                                    {url && (
-                                        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm bg-green-600 hover:bg-green-700 text-white text-sm font-semibold">
-                                            <MessageCircle className="w-4 h-4" /> Apri WhatsApp
-                                        </a>
-                                    )}
-                                    {waResult.booking.payment_url && (
-                                        <button onClick={() => { navigator.clipboard.writeText(waResult.booking.payment_url); toast.success("Link di pagamento copiato"); }} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm border border-lake-border text-sm">
-                                            <Copy className="w-4 h-4" /> Copia link pagamento
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })()}
-                    <DialogFooter><Button variant="outline" onClick={() => setWaResult(null)}>Chiudi</Button></DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {requestActions.dialogs}
 
             <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                 <DialogContent className="sm:max-w-[440px] border-t-4 border-t-rose-400">
@@ -699,7 +605,7 @@ export default function AdminBookings() {
                     )}
                     <DialogFooter className="gap-2 sm:gap-0">
                         {selectedBooking?.guest_phone && (
-                            <Button variant="outline" onClick={() => { setDetailOpen(false); openWhatsapp(selectedBooking); }} className="text-green-700 border-green-200">
+                            <Button variant="outline" onClick={() => { setDetailOpen(false); requestActions.openWhatsapp(selectedBooking); }} className="text-green-700 border-green-200">
                                 <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
                             </Button>
                         )}
